@@ -8,4 +8,4 @@ COPY consumer.py ./
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD [ "python3", "./consumer.py"]
+CMD [ "python3", "-u", "./consumer.py"]

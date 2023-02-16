@@ -44,7 +44,8 @@ def generate_move_detection_daily(date):
 
 producer = KafkaProducer(
     bootstrap_servers=['kafka:29090'],
-    value_serializer=lambda x: dumps(x).encode('utf-8'))
+    value_serializer=lambda x: dumps(x).encode('utf-8')
+    )
 
 starttime = time.time()
 Etotal = Water_total = 0
@@ -66,7 +67,7 @@ while True:
     print("miac1: ", miac1)
     print("MIAC2: ", miac2)
     print("W1: ", w1)
-    producer.send('test3', value=th1)
+    producer.send('test', value=th1)
 
     if starting_date.hour == 0 and starting_date.minute == 0:
         Etotal += 2600*24 + generate_Energy_total()
