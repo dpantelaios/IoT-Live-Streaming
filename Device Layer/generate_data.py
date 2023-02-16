@@ -2,12 +2,13 @@ import datetime, timedelta
 from randomtimestamp import random_time
 import random
 import time
+from json import dumps
+from kafka import KafkaProducer
 
 starting_date = datetime.datetime(2020, 5, 17)
 print(str(starting_date))
 
 random.seed(15)
-print(1.5%1)
 #GENERATE EVERY 15 MINUTES(1 seconds in our simulation)
 def generate_thermal_sensor_values():
     return round(random.uniform(12, 35), 2)
@@ -41,6 +42,10 @@ def generate_move_detection_daily(date):
     # print(timestamps)
     return timestamps
 
+producer = KafkaProducer(
+    bootstrap_servers=['kafka:29090'],
+    value_serializer=lambda x: dumps(x).encode('utf-8'))
+
 starttime = time.time()
 Etotal = Water_total = 0
 while True:
@@ -61,6 +66,7 @@ while True:
     print("miac1: ", miac1)
     print("MIAC2: ", miac2)
     print("W1: ", w1)
+    producer.send('test', value=th1)
 
     if starting_date.hour == 0 and starting_date.minute == 0:
         Etotal += 2600*24 + generate_Energy_total()

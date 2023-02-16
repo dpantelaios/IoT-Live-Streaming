@@ -6,5 +6,5 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: device_layer
-    
+
 

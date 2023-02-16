@@ -1,3 +1,4 @@
 datetime
 timedelta
 randomtimestamp
+kafka-python

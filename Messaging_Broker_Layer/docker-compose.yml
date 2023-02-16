@@ -1,0 +1,25 @@
+version: "3"
+services:
+  zookeeper:
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  kafka:
+    image: 'bitnami/kafka:latest'
+    container_name: 'kafka'
+    ports:
+      - '9092:9092'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_GROUP_MAX_SESSION_TIMEOUT_MS=4000000
+      - KAFKA_LISTENERS=LISTENER_EXTERNAL://:9092, LISTENER_INTERNAL://kafka:29090
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_EXTERNAL://localhost:9092, LISTENER_INTERNAL://kafka:29090
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_EXTERNAL
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_EXTERNAL:PLAINTEXT, LISTENER_INTERNAL:PLAINTEXT
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+
+    depends_on:
+      - zookeeper
