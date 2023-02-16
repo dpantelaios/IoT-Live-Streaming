@@ -1,11 +1,11 @@
 version: "3.8"
 
 services:
-  device_layer:
+  live_streaming_layer:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: device_layer
+    container_name: live_streaming_layer
     networks:
       - messaging_broker_layer_default
       

@@ -4,8 +4,8 @@ from time import sleep
 
 
 consumer = KafkaConsumer(
-    'test',
-    bootstrap_servers=['localhost:9092'],
+    'test3',
+    bootstrap_servers=['kafka:29090'],
     auto_offset_reset='earliest',
     enable_auto_commit=True,
     group_id='my-group-id',
