@@ -67,7 +67,14 @@ while True:
     print("miac1: ", miac1)
     print("MIAC2: ", miac2)
     print("W1: ", w1)
-    producer.send('test', value=th1)
+    producer.send('th1', value=th1)
+    producer.send('th2', value=th2)
+    producer.send('hvac1', value=hvac1)
+    producer.send('hvac2', value=hvac2)
+    producer.send('miac1', value=miac1)
+    producer.send('miac2', value=miac2)
+    producer.send('w1', value=w1)
+
 
     if starting_date.hour == 0 and starting_date.minute == 0:
         Etotal += 2600*24 + generate_Energy_total()
@@ -79,11 +86,15 @@ while True:
         Water_total_str = str(starting_date) + " | " + str(Water_total)
         print("Etot: ", Etotal_str)
         print("Water_total_str: ", Water_total_str)
+        producer.send('e_tot', value=Etotal_str)
+        producer.send('wtot', value=Water_total_str)
         
     for temp_timestamp in timestamps:
         if temp_timestamp <= starting_date:
             print("SENT MOVE DETECTION")
-            print(str(temp_timestamp) + " | 1")
+            mov1 = str(temp_timestamp) + " | 1"
+            print(mov1)
+            producer.send('mov1', value=mov1)
             timestamps.pop(0)
 
     starting_date = starting_date + timedelta.Timedelta(minutes=15)
