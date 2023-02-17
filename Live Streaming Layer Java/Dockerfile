@@ -1,16 +1,12 @@
-FROM openjdk:8-slim
+FROM openjdk:latest
 
 WORKDIR /usr/app/src
 
 COPY Consumer_java.java ./
+COPY kafka-clients-2.5.0.jar ./
+COPY kafka-clients-1.0.1.jar ./
+COPY kafka-clients-2.8.1.jar ./
 
-# RUN pip install --no-cache-dir --upgrade pip
-# RUN apt-get --no-cache-dir -r requirements.txt
-# RUN apt-get update && apt-get -y install org.apache.kafka.clients.consumer.*
-
-# RUN java -cp libs SimpleProducer *topicname*
-# RUN javac -cp libs *.java
-# RUN apt-get update && apt-get install -y --no-install-recommends libc6 libx11-6 libxext6 libxrender1 libstdc++ libssl1.0 libfreetype6 fontconfig && apt-get clean
-RUN ["javac",  "Consumer_java.java"]
+RUN ["javac", "-cp", "kafka-clients-2.5.0.jar",  "Consumer_java.java"]
 
 ENTRYPOINT ["java","Consumer_java"]
