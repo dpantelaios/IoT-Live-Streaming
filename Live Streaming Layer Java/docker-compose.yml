@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  live_streaming_layer_java:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live_streaming_layer_java
+    networks:
+      - messaging_broker_layer_default
+      
+networks:
+  messaging_broker_layer_default:
+    external: true
+
+
