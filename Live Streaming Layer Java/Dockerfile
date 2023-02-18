@@ -1,8 +1,17 @@
 FROM maven:3.8.1-adoptopenjdk-15 AS build-function
 RUN mkdir /app
-COPY . /app
 WORKDIR /app
-RUN mvn clean install -DskipTests
+
+COPY pom.xml .
+RUN mvn verify --fail-never
+#RUN mvn clean package -Dmaven.main.skip -Dmaven.test.skip && rm -r target
+
+COPY . .
+#RUN mvn clean package -Dmaven.test.skip
+RUN mvn package
+
+#RUN mvn install -DskipTests
+#RUN mvn clean install -DskipTests
 
 FROM openjdk:15-jdk
 COPY --from=build-function /app/target/*.jar /app.jar
