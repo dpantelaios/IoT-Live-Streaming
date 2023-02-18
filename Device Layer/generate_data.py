@@ -44,7 +44,8 @@ def generate_move_detection_daily(date):
 
 producer = KafkaProducer(
     bootstrap_servers=['kafka:29090'],
-    value_serializer=lambda x: dumps(x).encode('utf-8')
+    value_serializer=lambda x: dumps(x).encode('utf-8'),
+    key_serializer=lambda x: dumps(x).encode('utf-8')
     )
 
 starttime = time.time()
@@ -52,7 +53,7 @@ Etotal = Water_total = 0
 while True:
     print(starting_date)
 
-    th1 = str(starting_date) + " | " + str(generate_thermal_sensor_values())
+    th1 = {"produceDate":str(starting_date), "value":str(generate_thermal_sensor_values())}
     th2 = str(starting_date) + " | " + str(generate_thermal_sensor_values())
     hvac1 = str(starting_date) + " | " + str(generate_energy_air_conditioner(0, 100))
     hvac2 = str(starting_date) + " | " + str(generate_energy_air_conditioner(0, 200))
@@ -67,7 +68,11 @@ while True:
     print("miac1: ", miac1)
     print("MIAC2: ", miac2)
     print("W1: ", w1)
-    producer.send('th1', value=th1)
+    # tst = {"temperature": 33.6, "humidity": 49.1, "wind": 1.1, "soil": 0.6}
+    # print(tst)
+    # print(dumps(tst))
+    # producer.send('th1', value=tst)
+    producer.send('th1', value=th1, key="th1")
     producer.send('th2', value=th2)
     producer.send('hvac1', value=hvac1)
     producer.send('hvac2', value=hvac2)
