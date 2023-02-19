@@ -14,7 +14,7 @@ services:
     - '8125:8125'
     networks:
       - messaging_broker_layer_default
-      
+
   influxdb:
     image: influxdb:1.8-alpine
     container_name: influxdb
@@ -28,9 +28,27 @@ services:
     volumes:
       - influxdb_data:/var/lib/influxdb
 
+  grafana:
+    image: grafana/grafana
+    container_name: grafana-server
+    restart: always
+    depends_on:
+      - influxdb
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=
+    links:
+      - influxdb
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 networks:
   messaging_broker_layer_default:
     external: true
-    
+
 volumes:
+  grafana_data: {}
   influxdb_data: {}
