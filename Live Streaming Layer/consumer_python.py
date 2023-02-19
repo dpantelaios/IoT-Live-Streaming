@@ -10,6 +10,7 @@ consumer_th1 = KafkaConsumer(
     enable_auto_commit=True,
     group_id='my-group-id',
     value_deserializer=lambda x: loads(x.decode('utf-8')),
+    #value_deserializer = lambda x: x.decode('utf-8'),
     key_deserializer=lambda x: loads(x.decode('utf-8'))
 )
 

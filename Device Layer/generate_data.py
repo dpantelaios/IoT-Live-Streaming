@@ -6,7 +6,8 @@ from json import dumps
 from kafka import KafkaProducer
 
 starting_date = datetime.datetime(2020, 5, 17)
-print(str(starting_date))
+msg_interval = 1
+# print(str(starting_date))
 
 random.seed(15)
 #GENERATE EVERY 15 MINUTES(1 seconds in our simulation)
@@ -51,7 +52,7 @@ producer = KafkaProducer(
 starttime = time.time()
 Etotal = Water_total = 0
 while True:
-    print(starting_date)
+    # print(starting_date)
 
     th1 = {"produceDate":str(starting_date), "value":str(generate_thermal_sensor_values())}
     th2 = str(starting_date) + " | " + str(generate_thermal_sensor_values())
@@ -62,23 +63,23 @@ while True:
     w1 = str(starting_date) + " | " + str(generate_water_consumption())
     
     print("TH1: ", th1)
-    print("TH2: ", th2)
-    print("HVAC1: ", hvac1)
-    print("HVAC2: ", hvac2)
-    print("miac1: ", miac1)
-    print("MIAC2: ", miac2)
-    print("W1: ", w1)
+    # print("TH2: ", th2)
+    # print("HVAC1: ", hvac1)
+    # print("HVAC2: ", hvac2)
+    # print("miac1: ", miac1)
+    # print("MIAC2: ", miac2)
+    # print("W1: ", w1)
     # tst = {"temperature": 33.6, "humidity": 49.1, "wind": 1.1, "soil": 0.6}
     # print(tst)
     # print(dumps(tst))
     # producer.send('th1', value=tst)
     producer.send('th1', value=th1, key="th1")
-    producer.send('th2', value=th2)
-    producer.send('hvac1', value=hvac1)
-    producer.send('hvac2', value=hvac2)
-    producer.send('miac1', value=miac1)
-    producer.send('miac2', value=miac2)
-    producer.send('w1', value=w1)
+    # producer.send('th2', value=th2)
+    # producer.send('hvac1', value=hvac1)
+    # producer.send('hvac2', value=hvac2)
+    # producer.send('miac1', value=miac1)
+    # producer.send('miac2', value=miac2)
+    # producer.send('w1', value=w1)
 
 
     if starting_date.hour == 0 and starting_date.minute == 0:
@@ -89,18 +90,18 @@ while True:
         timestamps = generate_move_detection_daily(starting_date)
         Etotal_str = str(starting_date) + " | " + str(Etotal)
         Water_total_str = str(starting_date) + " | " + str(Water_total)
-        print("Etot: ", Etotal_str)
-        print("Water_total_str: ", Water_total_str)
-        producer.send('e_tot', value=Etotal_str)
-        producer.send('wtot', value=Water_total_str)
+        # print("Etot: ", Etotal_str)
+        # print("Water_total_str: ", Water_total_str)
+        # producer.send('e_tot', value=Etotal_str)
+        # producer.send('wtot', value=Water_total_str)
         
     for temp_timestamp in timestamps:
         if temp_timestamp <= starting_date:
-            print("SENT MOVE DETECTION")
-            mov1 = str(temp_timestamp) + " | 1"
-            print(mov1)
-            producer.send('mov1', value=mov1)
+            # print("SENT MOVE DETECTION")
+            # mov1 = str(temp_timestamp) + " | 1"
+            # print(mov1)
+            # producer.send('mov1', value=mov1)
             timestamps.pop(0)
 
     starting_date = starting_date + timedelta.Timedelta(minutes=15)
-    time.sleep(1 - ((time.time() - starttime) % 1))
+    time.sleep(msg_interval - ((time.time() - starttime) % msg_interval))
