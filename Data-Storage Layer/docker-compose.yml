@@ -27,6 +27,8 @@ services:
       - '8086:8086'
     volumes:
       - influxdb_data:/var/lib/influxdb
+    networks:
+      - messaging_broker_layer_default
 
   grafana:
     image: grafana/grafana
@@ -45,10 +47,11 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
 
-networks:
-  messaging_broker_layer_default:
-    external: true
-
 volumes:
   grafana_data: {}
   influxdb_data: {}
+
+
+networks:
+  messaging_broker_layer_default:
+    external: true
