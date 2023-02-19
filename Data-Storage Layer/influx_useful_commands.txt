@@ -1,0 +1,9 @@
+docker exec influxdb influx -execute "INSERT INTO influx.autogen weather,location=us-midwest temperature=82 00400200"
+
+docker exec influxdb influx -execute "SELECT * FROM influx.autogen.weather"
+
+docker exec influxdb influx -execute "CREATE RETENTION POLICY oneday ON influx DURATION 1d REPLICATION 1"
+
+docker exec influxdb influx -execute "SHOW DATABASES"
+
+docker exec influxdb influx -execute "SHOW MEASUREMENTS on influx"  
