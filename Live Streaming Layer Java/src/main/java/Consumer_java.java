@@ -13,7 +13,13 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import model.AverageMeasurement;
 import model.JsonSerde;
+import model.Measurements;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -26,24 +32,39 @@ public class Consumer_java {
 		//create kafka consumer
 		Properties properties = getConfig();
 		Serde<Measurements> MeasurementSerde = new JsonSerde<>(Measurements.class);
+        Serde<AverageMeasurement> AverageMeasurementSerde = new JsonSerde<>(AverageMeasurement.class);
 		StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-		KStream<String, Measurements> bankBalancesStream = streamsBuilder.stream("th1",
-				Consumed.with(Serdes.String(), MeasurementSerde));
+		KStream<String, Measurements> MeasurementsStream = streamsBuilder.stream("th1",
+				Consumed.with(Serdes.String(), MeasurementSerde)
+                .withTimestampExtractor(new MeasurementTimeExtractor())
+                );
 				// .map((sensor, measurement) -> KeyValue.pair(measurement.getdate(), measurement.getMeasurement()))
 				// .peek((key, value) -> {System.out.println(key); System.out.println(value);});
 		
-		bankBalancesStream.peek((key, value) -> {System.out.println(key); System.out.println(value);})
+		MeasurementsStream
+        .peek((key, value) -> {System.out.println(key); System.out.println(value);})
 		.to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
-				// .toStream()
-                // .groupByKey()
-                // .aggregate(() -> new AggregatedMeasurement(new Date()),
-                //         (key, value, aggregate) -> new AggregatedMeasurement().AddMeasurement(value).getTotalMeasurement(),
-                //         Materialized.<Date , KeyValueStore<Bytes, byte[]>>as(BANK_BALANCES_STORE)
-                //             .withKeySerde(Serdes.Date())
-                //             .withValueSerde(Serdes.Int())
-                // )
-                // .toStream();
+
+        MeasurementsStream
+        .groupByKey()
+        .windowedBy(TimeWindows.of(Duration.ofDays(1)))
+        .aggregate(()-> new AverageMeasurement(0.0f, 0, 0.0f),
+                (key, value, aggregate) -> {
+                    aggregate.setAddedValues(aggregate.getAddedValues()+value.getValue());
+                    aggregate.setCount(aggregate.getCount()+1);
+                    aggregate.setAvgMeasurement(aggregate.getAddedValues()/aggregate.getCount());
+                    return aggregate;
+                },
+                Materialized.with(Serdes.String(), AverageMeasurementSerde))
+                .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
+                .toStream()
+                .peek((key, value) -> {System.out.println(key); System.out.println(value);});
+        
+        
+
+        
+
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);
         // Start the application
         kafkaStreams.start();
