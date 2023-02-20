@@ -43,17 +43,21 @@ public class Consumer_java {
 				// .map((sensor, measurement) -> KeyValue.pair(measurement.getdate(), measurement.getMeasurement()))
 				// .peek((key, value) -> {System.out.println(key); System.out.println(value);});
 		
-		MeasurementsStream
-        .peek((key, value) -> {System.out.println(key); System.out.println(value);});
+		// MeasurementsStream
+        // .peek((key, value) -> {System.out.println(key); System.out.println(value);})
+        // .filter((key, value) -> key.toString()=="th1")
+        // .peek((key, value) -> {System.out.println(key);});
+        // .peek((key, value) -> {System.out.println(key); System.out.println(value);});
 		// .to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
 
         MeasurementsStream
+        .peek((key, value) -> {System.out.println("bla0"); System.out.println(value);})
         .groupByKey()
-        // .windowedBy(TimeWindows.of(Duration.ofDays(1)))
-        // .windowedBy(TimeWindows.of(Duration.ofMillis(3000)))
-        .windowedBy(TimeWindows.of(Duration.ofMinutes(30)))
-        // .windowedBy(TimeWindows.of(Duration.ofSeconds(3, 0)))
-        // .count()
+        // .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
+        // .windowedBy(TimeWindows.of(Duration.ofMillis(1000L)))
+        .windowedBy(TimeWindows.of(Duration.ofMinutes(300L)))
+        // // .windowedBy(TimeWindows.of(Duration.ofSeconds(3, 0)))
+        // //.count()
         .aggregate(()-> new AverageMeasurement(0.0f, 0, 0.0f),
                 (key, value, aggregate) -> {
                     aggregate.setAddedValues(aggregate.getAddedValues()+value.getValue());
@@ -64,12 +68,9 @@ public class Consumer_java {
                 Materialized.with(Serdes.String(), AverageMeasurementSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
-        .peek((key, value) -> {System.out.println(key); System.out.println(value);})
+        .peek((key, value) -> {System.out.println(key.key()); System.out.println(value);})
         .map((k,v) -> KeyValue.pair(k.key(), v))
         .to("RAW", Produced.with(Serdes.String(), AverageMeasurementSerde));
-        
-
-        
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);
         // Start the application

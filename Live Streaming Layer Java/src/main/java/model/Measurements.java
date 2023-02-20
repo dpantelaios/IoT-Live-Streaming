@@ -16,9 +16,13 @@ import java.time.LocalDate;
 public class Measurements {
 
     @JsonFormat(shape = JsonFormat.Shape.STRING,
-            pattern = "yyyy-MM-dd hh:mm:ss")
+            pattern = "yyyy-MM-dd HH:mm:ss")
     private Date produceDate;
     private float value;
+    // @JsonFormat(shape = JsonFormat.Shape.STRING,
+    //         pattern = "yyyy-MM-dd hh:mm:ss")
+    // private Date produce_Date;
+    // private float value_2;
 
 
     // public Measurement(Date measurement_time, Integer measurement){
