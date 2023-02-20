@@ -8,6 +8,7 @@ services:
     - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
     depends_on:
       - influxdb
+      - grafana
     links:
       - influxdb
     ports:
@@ -46,6 +47,8 @@ services:
       - '3000:3000'
     volumes:
       - grafana_data:/var/lib/grafana
+    networks:
+      - messaging_broker_layer_default
 
 volumes:
   grafana_data: {}
