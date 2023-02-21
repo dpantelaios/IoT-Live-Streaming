@@ -2,12 +2,12 @@ import datetime, timedelta
 from randomtimestamp import random_time
 import random
 import time
+# from datetime import datetime
 from json import dumps
 from kafka import KafkaProducer
 
 starting_date = datetime.datetime(2020, 5, 17)
 msg_interval = 1
-# print(str(starting_date))
 
 random.seed(15)
 #GENERATE EVERY 15 MINUTES(1 seconds in our simulation)
@@ -52,7 +52,9 @@ producer = KafkaProducer(
 starttime = time.time()
 Etotal = Water_total = 0
 while True:
-    # print(starting_date)
+    print(starting_date)
+    s = starting_date.timestamp()
+    print(s)
 
     th1 = {"produceDate":str(starting_date), "value":str(generate_thermal_sensor_values())}
     th2 = str(starting_date) + " | " + str(generate_thermal_sensor_values())
@@ -69,10 +71,11 @@ while True:
     # print("miac1: ", miac1)
     # print("MIAC2: ", miac2)
     # print("W1: ", w1)
-    # tst = {"temperature": 33.6, "humidity": 49.1, "wind": 1.1, "soil": 0.6}
-    # print(tst)
-    # print(dumps(tst))
-    # producer.send('th1', value=tst)
+    # tst = {"measurement":"weather", "temperature": 33.6, "Timestamp":1465839830100400200}
+    # producer.send('RAW', value={"temperature":33.6}, key="th1")
+    
+    # producer.send('RAW', value={"produceDate":s, "value":generate_thermal_sensor_values()}, key="th1")
+    
     producer.send('th1', value=th1, key="th1")
     # producer.send('th2', value=th2)
     # producer.send('hvac1', value=hvac1)
@@ -97,10 +100,10 @@ while True:
         
     for temp_timestamp in timestamps:
         if temp_timestamp <= starting_date:
-            # print("SENT MOVE DETECTION")
-            # mov1 = str(temp_timestamp) + " | 1"
-            # print(mov1)
-            # producer.send('mov1', value=mov1)
+            print("SENT MOVE DETECTION")
+            mov1 = str(temp_timestamp) + " | 1"
+            print(mov1)
+            producer.send('mov1', value=mov1)
             timestamps.pop(0)
 
     starting_date = starting_date + timedelta.Timedelta(minutes=15)
