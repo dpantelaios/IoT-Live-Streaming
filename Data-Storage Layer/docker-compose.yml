@@ -11,10 +11,10 @@ services:
     links:
       - influxdb
     ports:
-    - '8127:8127'
+    - '8125:8125'
     networks:
       - messaging_broker_layer_default
-      - grafana_default
+      - presentationlayer_default
 
 
   influxdb:
@@ -39,5 +39,5 @@ volumes:
 networks:
   messaging_broker_layer_default:
     external: true
-  grafana_default:
+  presentationlayer_default:
     external: true
