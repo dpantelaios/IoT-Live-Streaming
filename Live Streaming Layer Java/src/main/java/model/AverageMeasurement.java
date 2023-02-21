@@ -19,6 +19,7 @@ public class AverageMeasurement {
     private float addedValues;
     private int count;
     private float avgMeasurement;
+    private Date aggregationDate;
 
     // public AverageMeasurement(final float addV, final int cnt, final float avg) {
     //     this.addedValues = addV;

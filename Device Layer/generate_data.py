@@ -93,9 +93,9 @@ while True:
         timestamps = generate_move_detection_daily(starting_date)
         Etotal_str = str(starting_date) + " | " + str(Etotal)
         Water_total_str = str(starting_date) + " | " + str(Water_total)
-        # print("Etot: ", Etotal_str)
+        print("Etot: ", Etotal_str)
         # print("Water_total_str: ", Water_total_str)
-        # producer.send('e_tot', value=Etotal_str)
+        producer.send('e_tot', value={"produceDate":str(starting_date), "value":str(Etotal)}, key="e_tot")
         # producer.send('wtot', value=Water_total_str)
         
     for temp_timestamp in timestamps:
