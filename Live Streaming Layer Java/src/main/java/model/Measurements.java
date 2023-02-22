@@ -15,10 +15,10 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class Measurements {
 
+    private float value;
     @JsonFormat(shape = JsonFormat.Shape.STRING,
             pattern = "yyyy-MM-dd HH:mm:ss")
     private Date produceDate;
-    private float value;
 
     public Date withouttimeDate(){
         Date test = produceDate;
@@ -26,5 +26,10 @@ public class Measurements {
         test.setMinutes(0);
         test.setSeconds(0);
         return test;
+    }
+
+    public long timeDatehelp(){
+        Date test = produceDate;
+        return test.toInstant().toEpochNano();
     }
 }
