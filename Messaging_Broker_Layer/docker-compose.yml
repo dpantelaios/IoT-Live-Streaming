@@ -19,7 +19,27 @@ services:
       - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_EXTERNAL
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_EXTERNAL:PLAINTEXT, LISTENER_INTERNAL:PLAINTEXT
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_PLAINTEXT_LISTENER=yes 
+      # - KAFKA_CREATE_TOPICS=th1:1:1, RAW:1:1, AGGREGATED:1:1, e_tot:1:1,  DAILY_RAW:1:1, AGGREGATED_DIFF:1:1
 
     depends_on:
       - zookeeper
+
+  # init-kafka:
+  #   image: 'bitnami/kafka:latest'
+  #   depends_on:
+  #     - kafka
+  #   entrypoint: [ '/bin/sh', '-c' ]
+  #   command: |
+  #     "echo "Waiting for Kafka to come online..."
+  #     docker exec -it kafka /opt/bitnami/kafka/bin/kafka-topics.sh \ --create \ --bootstrap-server  localhost:9092 \ --replication-factor 1 \ --partitions 1 \ --topic RAW"
+
+  # kafka-create-topics:
+  #   image: 'bitnami/kafka:latest'
+  #   depends_on:
+  #     - kafka
+  #   hostname: kafka-create-topics
+  #   command: ["bash", "./create-topics.sh"]
+  #   working_dir: /scripts
+  #   volumes:
+  #   - ./scripts:/scripts

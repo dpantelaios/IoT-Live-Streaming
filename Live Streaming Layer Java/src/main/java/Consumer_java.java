@@ -87,20 +87,20 @@ public class Consumer_java {
         DailyMeasurementsStream
         .peek((key, value) -> {System.out.println(key); System.out.println(value);})
         .groupByKey()
-        .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
+        .windowedBy(TimeWindows.of(Duration.ofDays(2L)).advanceBy(Duration.ofDays(1L)))
         .aggregate(()-> new DiffMeasurements(0.0f, 0.0f, new Date()),
                 (key, value, aggregate) -> {
-                    aggregate.setPreviousValue(value.getValue());
                     aggregate.setCurrentValue(value.getValue() - aggregate.getPreviousValue());
+                    aggregate.setPreviousValue(value.getValue());
                     aggregate.setDiffDate(value.getProduceDate());
                     return aggregate;
                 },
                 Materialized.with(Serdes.String(), DiffMeasurementsSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
-        .peek((key, value) -> {System.out.println(key.key()); System.out.println(value);});
-        // .map((k,v) -> KeyValue.pair(k.key(), v))
-        // .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), DiffMeasurementsSerde));
+        .peek((key, value) -> {System.out.println(key.key()); System.out.println(value);})
+        .map((k,v) -> KeyValue.pair(k.key(), v))
+        .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), DiffMeasurementsSerde));
 
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);
