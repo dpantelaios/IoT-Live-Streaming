@@ -50,7 +50,7 @@ public class Consumer_java {
 		MeasurementsStream
         // .to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
         .groupByKey()
-        .aggregate(()-> new HelpDate(0.0f, 0),
+        .aggregate(()-> new HelpDate(0.0f, new Date()),
                 (key, value, aggregate) -> {
                     aggregate.setValue(value.getValue());
                     aggregate.setProduceDate(value.timeDatehelp());
