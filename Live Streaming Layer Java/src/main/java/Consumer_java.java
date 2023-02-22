@@ -21,6 +21,7 @@ import model.AverageMeasurement;
 import model.JsonSerde;
 import model.Measurements;
 import model.DiffMeasurements;
+import model.HelpDate;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -30,15 +31,14 @@ import java.util.Date;
 
 public class Consumer_java {
 	public static void main(String[] args) {
-
-		//create kafka consumer 
+		//create kafka consumer
 		Properties properties = getConfig();
 		Serde<Measurements> MeasurementSerde = new JsonSerde<>(Measurements.class);
         Serde<AverageMeasurement> AverageMeasurementSerde = new JsonSerde<>(AverageMeasurement.class);
         Serde<DiffMeasurements> DiffMeasurementsSerde = new JsonSerde<>(DiffMeasurements.class);
+        Serde<HelpDate> HelpDateSerde = new JsonSerde<>(HelpDate.class);
 		StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        // stream to consume from sensor topics and extract proper timestamps
 		KStream<String, Measurements> MeasurementsStream = streamsBuilder.stream("th1",
 				Consumed.with(Serdes.String(), MeasurementSerde)
                 .withTimestampExtractor(new MeasurementTimeExtractor())
@@ -48,11 +48,22 @@ public class Consumer_java {
 		
         // 15MINUTES SENSORS RAW
 		MeasurementsStream
-        .to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
-		
+        // .to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
+        .groupByKey()
+        .aggregate(()-> new HelpDate(0.0f, 0),
+                (key, value, aggregate) -> {
+                    aggregate.setValue(value.getValue());
+                    aggregate.setProduceDate(value.timeDatehelp());
+                    return aggregate;
+                },
+                Materialized.with(Serdes.String(), HelpDateSerde))
+        .toStream()
+        .map((k,v) -> KeyValue.pair(k, v))
+        .to("RAW", Produced.with(Serdes.String(), HelpDateSerde));
+
         // AggDay[x]
         MeasurementsStream
-        .peek((key, value) -> {System.out.println("bla0"); System.out.println(value);})
+        .peek((key, value) -> {System.out.println(key); System.out.println(value);})
         .groupByKey()
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         // .windowedBy(TimeWindows.of(Duration.ofMillis(1000L)))
