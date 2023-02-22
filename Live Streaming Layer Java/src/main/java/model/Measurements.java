@@ -28,8 +28,8 @@ public class Measurements {
         return test;
     }
 
-    public long timeDatehelp(){
+    public Date timeDatehelp(){
         Date test = produceDate;
-        return test.toInstant().toEpochNano();
+        return test;
     }
 }
