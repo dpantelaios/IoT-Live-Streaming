@@ -1,6 +1,7 @@
 package model;
 import com.fasterxml.jackson.annotation.JsonFormat;
-
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import model.CustomDateDeserializer;
 import org.apache.kafka.common.serialization.Serdes;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -16,9 +17,13 @@ import java.time.LocalDate;
 public class Measurements {
 
     private float value;
-    @JsonFormat(shape = JsonFormat.Shape.STRING,
-            pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonDeserialize(using= CustomDateDeserializer.class)
     private Date produceDate;
+
+    // public Date getProduceDate(){
+    //     Date test = produceDate;
+    //     return produceDate;
+    // }
 
     public Date withouttimeDate(){
         Date test = produceDate;
@@ -28,8 +33,9 @@ public class Measurements {
         return test;
     }
 
-    public Date timeDatehelp(){
+    public long timeDatehelp(){
         Date test = produceDate;
-        return test;
+        // return test.toInstant().toEpochMilli() * 1000000L + test.toInstant().getNano();
+        return test.toInstant().toEpochMilli();
     }
 }
