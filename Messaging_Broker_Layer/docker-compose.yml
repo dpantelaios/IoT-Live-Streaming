@@ -25,21 +25,25 @@ services:
     depends_on:
       - zookeeper
 
-  # init-kafka:
-  #   image: 'bitnami/kafka:latest'
-  #   depends_on:
-  #     - kafka
-  #   entrypoint: [ '/bin/sh', '-c' ]
-  #   command: |
-  #     "echo "Waiting for Kafka to come online..."
-  #     docker exec -it kafka /opt/bitnami/kafka/bin/kafka-topics.sh \ --create \ --bootstrap-server  localhost:9092 \ --replication-factor 1 \ --partitions 1 \ --topic RAW"
+  init-kafka:
+    image: 'bitnami/kafka:latest'
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --list
 
-  # kafka-create-topics:
-  #   image: 'bitnami/kafka:latest'
-  #   depends_on:
-  #     - kafka
-  #   hostname: kafka-create-topics
-  #   command: ["bash", "./create-topics.sh"]
-  #   working_dir: /scripts
-  #   volumes:
-  #   - ./scripts:/scripts
+      echo -e 'Creating kafka topics'
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic th1 --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic RAW --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic AGGREGATED --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic e_tot --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic DAILY_RAW --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic AGGREGATED_DIFF --replication-factor 1 --partitions 1
+
+
+      echo -e 'Successfully created the following topics:'
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --list
+      "

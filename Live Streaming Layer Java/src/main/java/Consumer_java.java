@@ -30,13 +30,15 @@ import java.util.Date;
 
 public class Consumer_java {
 	public static void main(String[] args) {
-		//create kafka consumer
+
+		//create kafka consumer 
 		Properties properties = getConfig();
 		Serde<Measurements> MeasurementSerde = new JsonSerde<>(Measurements.class);
         Serde<AverageMeasurement> AverageMeasurementSerde = new JsonSerde<>(AverageMeasurement.class);
         Serde<DiffMeasurements> DiffMeasurementsSerde = new JsonSerde<>(DiffMeasurements.class);
 		StreamsBuilder streamsBuilder = new StreamsBuilder();
 
+        // stream to consume from sensor topics and extract proper timestamps
 		KStream<String, Measurements> MeasurementsStream = streamsBuilder.stream("th1",
 				Consumed.with(Serdes.String(), MeasurementSerde)
                 .withTimestampExtractor(new MeasurementTimeExtractor())
@@ -46,7 +48,6 @@ public class Consumer_java {
 		
         // 15MINUTES SENSORS RAW
 		MeasurementsStream
-        // .peek((key, value) -> {System.out.println(key); System.out.println(value);})
         .to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
 		
         // AggDay[x]
