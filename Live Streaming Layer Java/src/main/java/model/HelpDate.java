@@ -13,6 +13,6 @@ import java.time.LocalDate;
 public class HelpDate {
 
     private float value;
-    private long produceDate;
+    private Date produceDate;
 
 }
