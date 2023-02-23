@@ -15,7 +15,10 @@ consumer_th1 = KafkaConsumer(
 )
 
 # consumer_th1.subscribe(['th1', 'th2','hvac1', 'hvac2', 'miac1', 'miac2','w1', 'e_tot', 'mov1', 'wtot'])
-consumer_th1.subscribe(['RAW'])
+consumer_th1.subscribe(['AGGREGATED_DIFF'])
+# consumer_th1.subscribe(['th1'])
+# consumer_th1.subscribe(['etot'])
+# consumer_th1.subscribe(['AGGREGATED'])
 
 
 for event in consumer_th1:

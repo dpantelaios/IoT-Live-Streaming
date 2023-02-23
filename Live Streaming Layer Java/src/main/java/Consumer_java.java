@@ -19,89 +19,139 @@ import lombok.NoArgsConstructor;
 
 import model.AverageMeasurement;
 import model.JsonSerde;
-import model.Measurements;
-import model.DiffMeasurements;
+import model.MaxMeasurement;
+import model.Measurement;
+import model.DiffMeasurement;
+import model.SummedMeasurement;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
+import java.util.Set;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Arrays;
+
+/* Peek command */
+// .peek((key, value) -> {System.out.println(key.key()); System.out.println(value);})
 
 
 public class Consumer_java {
 	public static void main(String[] args) {
 
+        Set<String> avg15 = new HashSet<String>(Arrays.asList("\"th1\"", "\"th2\""));
+        Set<String> sum15 = new HashSet<String>(Arrays.asList("\"hvac1\"", "\"hvac2\"", "\"miac1\"","\"miac2\"","\"etot\""));
+
 		//create kafka consumer 
 		Properties properties = getConfig();
-		Serde<Measurements> MeasurementSerde = new JsonSerde<>(Measurements.class);
+		Serde<Measurement> MeasurementSerde = new JsonSerde<>(Measurement.class);
         Serde<AverageMeasurement> AverageMeasurementSerde = new JsonSerde<>(AverageMeasurement.class);
-        Serde<DiffMeasurements> DiffMeasurementsSerde = new JsonSerde<>(DiffMeasurements.class);
-		StreamsBuilder streamsBuilder = new StreamsBuilder();
+        Serde<DiffMeasurement> DiffMeasurementSerde = new JsonSerde<>(DiffMeasurement.class);
+        Serde<SummedMeasurement> SummedMeasurementSerde = new JsonSerde<>(SummedMeasurement.class);
+        Serde<MaxMeasurement> MaxMeasurementSerde = new JsonSerde<>(MaxMeasurement.class);
+        StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        // stream to consume from sensor topics and extract proper timestamps
-		KStream<String, Measurements> MeasurementsStream = streamsBuilder.stream("th1",
+        DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
+        // SimpleDateFormat jsonDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        /* 15 MIN DATA */
+
+        /* stream to consume from 15min average topics and extract proper timestamps */
+		KStream<String, Measurement> min15Stream = streamsBuilder.stream("th1",
 				Consumed.with(Serdes.String(), MeasurementSerde)
                 .withTimestampExtractor(new MeasurementTimeExtractor())
-                // .peek(consumerRecord -> {System.out.println(consumerRecord.timestamp());})
                 );
-				// .map((sensor, measurement) -> KeyValue.pair(measurement.getdate(), measurement.getMeasurement()))
 		
-        // 15MINUTES SENSORS RAW
-		MeasurementsStream
+        /* send raw data */
+		min15Stream
         .to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
 		
-        // AggDay[x]
-        MeasurementsStream
-        .peek((key, value) -> {System.out.println("bla0"); System.out.println(value);})
+        /* Calculate Daily Average AggDay[x] */
+        min15Stream
+        .filter((key, value) -> avg15.contains(key))
         .groupByKey()
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
-        // .windowedBy(TimeWindows.of(Duration.ofMillis(1000L)))
-        // // .windowedBy(TimeWindows.of(Duration.ofSeconds(3, 0)))
-        .aggregate(()-> new AverageMeasurement(0.0f, 0, 0.0f, new Date()),
+        .aggregate(()-> new AverageMeasurement(0.0, 0, 0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
                     aggregate.setAddedValues(aggregate.getAddedValues()+value.getValue());
                     aggregate.setCount(aggregate.getCount()+1);
                     aggregate.setAvgMeasurement(aggregate.getAddedValues()/aggregate.getCount());
                     aggregate.setAggregationDate(value.withouttimeDate());
+                    aggregate.setSensorName(key.replaceAll("\"", ""));
                     return aggregate;
                 },
                 Materialized.with(Serdes.String(), AverageMeasurementSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
-        .peek((key, value) -> {System.out.println(key.key()); System.out.println(value);})
         .map((k,v) -> KeyValue.pair(k.key(), v))
         .to("AGGREGATED", Produced.with(Serdes.String(), AverageMeasurementSerde));
+
+        /* Calculate Daily Sum AggDay[X] */
+        min15Stream
+        .filter((key, value) -> sum15.contains(key))
+        .groupByKey()
+        .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
+        .aggregate(()-> new SummedMeasurement(0.0, new Date(), new String()),
+                (key, value, aggregate) -> {
+                    aggregate.setSum(aggregate.getSum() + value.getValue());
+                    aggregate.setSumDate(value.getProduceDate());
+                    aggregate.setSensorName(key.replaceAll("\"", ""));
+                    return aggregate;
+                },
+                Materialized.with(Serdes.String(), SummedMeasurementSerde))
+        .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
+        .toStream()
+        .map((k,v) -> KeyValue.pair(k.key(), v))
+        .to("AGGREGATED", Produced.with(Serdes.String(), SummedMeasurementSerde));
         
         
-        // DAILY SENSORS
-        KStream<String, Measurements> DailyMeasurementsStream = streamsBuilder.stream("e_tot",
+        /* DAILY DATA */
+        KStream<String, Measurement> dailyMaxStream = streamsBuilder.stream("etot",
 				Consumed.with(Serdes.String(), MeasurementSerde)
                 .withTimestampExtractor(new MeasurementTimeExtractor())
                 );
 		
-        // DAILY RAW
-		DailyMeasurementsStream
-        // .peek((key, value) -> {System.out.println(key); System.out.println(value);})
+        /* send raw data */
+		dailyMaxStream
         .to("DAILY_RAW", Produced.with(Serdes.String(), MeasurementSerde));
         
-        // AggDayDiff[y]
-        DailyMeasurementsStream
-        .peek((key, value) -> {System.out.println(key); System.out.println(value);})
+        /* Calculate Daily Max AggDay[X] */
+        dailyMaxStream
+        .groupByKey()
+        .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
+        .aggregate(()-> new MaxMeasurement(0.0, new Date(), new String()),
+                (key, value, aggregate) -> {
+                    aggregate.setMaxValue(Math.max(aggregate.getMaxValue(), value.getValue()));
+                    aggregate.setMaxDate(value.getProduceDate());
+                    // aggregate.setSensorName(key.substring(1, key.length()-1));
+                    aggregate.setSensorName(key.replaceAll("\"", ""));
+                    return aggregate;
+                },
+                Materialized.with(Serdes.String(), MaxMeasurementSerde))
+        .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
+        .toStream()
+        .map((k,v) -> KeyValue.pair(k.key(), v))
+        .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), MaxMeasurementSerde));
+
+        // AggDayDiff[y] (currDay - prevDate)
+        dailyMaxStream
         .groupByKey()
         .windowedBy(TimeWindows.of(Duration.ofDays(2L)).advanceBy(Duration.ofDays(1L)))
-        .aggregate(()-> new DiffMeasurements(0.0f, 0.0f, new Date()),
+        .aggregate(()-> new DiffMeasurement(0.0, 0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
                     aggregate.setCurrentValue(value.getValue() - aggregate.getPreviousValue());
                     aggregate.setPreviousValue(value.getValue());
                     aggregate.setDiffDate(value.getProduceDate());
+                    aggregate.setSensorName(key.replaceAll("\"", ""));
                     return aggregate;
                 },
-                Materialized.with(Serdes.String(), DiffMeasurementsSerde))
+                Materialized.with(Serdes.String(), DiffMeasurementSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
-        .peek((key, value) -> {System.out.println(key.key()); System.out.println(value);})
         .map((k,v) -> KeyValue.pair(k.key(), v))
-        .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), DiffMeasurementsSerde));
+        .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), DiffMeasurementSerde));
 
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);

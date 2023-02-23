@@ -16,10 +16,11 @@ public class AverageMeasurement {
     //         pattern = "yyyy-MM-dd hh:mm:ss")
     // private Date measurement_time;
 
-    private float addedValues;
+    private double addedValues;
     private int count;
-    private float avgMeasurement;
+    private double avgMeasurement;
     private Date aggregationDate;
+    private String sensorName;
 
     // public AverageMeasurement(final float addV, final int cnt, final float avg) {
     //     this.addedValues = addV;

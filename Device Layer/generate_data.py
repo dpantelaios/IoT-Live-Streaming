@@ -7,7 +7,7 @@ from json import dumps
 from kafka import KafkaProducer
 
 starting_date = datetime.datetime(2020, 5, 17)
-msg_interval = 1
+msg_interval = 0.125
 
 random.seed(15)
 #GENERATE EVERY 15 MINUTES(1 seconds in our simulation)
@@ -51,20 +51,24 @@ producer = KafkaProducer(
 
 starttime = time.time()
 Etotal = Water_total = 0
+
+hvac1_daily_sum=0
+
 while True:
-    print(starting_date)
+    # print(starting_date)
     s = starting_date.timestamp()
-    print(s)
+    # print(s)
 
     th1 = {"produceDate":str(starting_date), "value":str(generate_thermal_sensor_values())}
     th2 = str(starting_date) + " | " + str(generate_thermal_sensor_values())
-    hvac1 = str(starting_date) + " | " + str(generate_energy_air_conditioner(0, 100))
+    hvac1_val = generate_energy_air_conditioner(0, 100)
+    hvac1 = {"produceDate":str(starting_date), "value":str(hvac1_val)}
     hvac2 = str(starting_date) + " | " + str(generate_energy_air_conditioner(0, 200))
     miac1 = str(starting_date) + " | " + str(generate_energy_rest_devices(0, 150))
     miac2 = str(starting_date) + " | " + str(generate_energy_rest_devices(0, 200))
     w1 = str(starting_date) + " | " + str(generate_water_consumption())
     
-    print("TH1: ", th1)
+    # print("TH1: ", th1)
     # print("TH2: ", th2)
     # print("HVAC1: ", hvac1)
     # print("HVAC2: ", hvac2)
@@ -76,14 +80,16 @@ while True:
     
     # producer.send('RAW', value={"produceDate":s, "value":generate_thermal_sensor_values()}, key="th1")
     
-    producer.send('th1', value=th1, key="th1")
+    #producer.send('th1', value=th1, key="th1")
     # producer.send('th2', value=th2)
-    # producer.send('hvac1', value=hvac1)
+    
+    # producer.send('th1', value=hvac1, key="hvac1")
     # producer.send('hvac2', value=hvac2)
     # producer.send('miac1', value=miac1)
     # producer.send('miac2', value=miac2)
     # producer.send('w1', value=w1)
 
+    
 
     if starting_date.hour == 0 and starting_date.minute == 0:
         Etotal += 2600*24 + generate_Energy_total()
@@ -94,16 +100,21 @@ while True:
         Etotal_str = str(starting_date) + " | " + str(Etotal)
         Water_total_str = str(starting_date) + " | " + str(Water_total)
         print("Etot: ", Etotal_str)
+        producer.send('etot', value={"produceDate":str(starting_date), "value":str(Etotal)}, key="etot")
         # print("Water_total_str: ", Water_total_str)
-        producer.send('e_tot', value={"produceDate":str(starting_date), "value":str(Etotal)}, key="e_tot")
         # producer.send('wtot', value=Water_total_str)
-        
+
+        # print("hvac1 daily sum: {}".format(hvac1_daily_sum))
+        hvac1_daily_sum=0
+    
+    hvac1_daily_sum = hvac1_daily_sum + hvac1_val
+
     for temp_timestamp in timestamps:
         if temp_timestamp <= starting_date:
-            print("SENT MOVE DETECTION")
+            # print("SENT MOVE DETECTION")
             mov1 = str(temp_timestamp) + " | 1"
-            print(mov1)
-            producer.send('mov1', value=mov1)
+            # print(mov1)
+            # producer.send('mov1', value=mov1)
             timestamps.pop(0)
 
     starting_date = starting_date + timedelta.Timedelta(minutes=15)
