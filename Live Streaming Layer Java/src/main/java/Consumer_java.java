@@ -23,6 +23,7 @@ import model.MaxMeasurement;
 import model.Measurement;
 import model.DiffMeasurement;
 import model.SummedMeasurement;
+import model.EnrichedMeasurement;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -51,6 +52,7 @@ public class Consumer_java {
         Serde<DiffMeasurement> DiffMeasurementSerde = new JsonSerde<>(DiffMeasurement.class);
         Serde<SummedMeasurement> SummedMeasurementSerde = new JsonSerde<>(SummedMeasurement.class);
         Serde<MaxMeasurement> MaxMeasurementSerde = new JsonSerde<>(MaxMeasurement.class);
+        Serde<EnrichedMeasurement> EnrichedMeasurementSerde = new JsonSerde<>(EnrichedMeasurement.class);
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
@@ -66,7 +68,8 @@ public class Consumer_java {
 		
         /* send raw data */
 		min15Stream
-        .to("RAW", Produced.with(Serdes.String(), MeasurementSerde));
+        .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), key.replaceAll("\"", ""))))
+        .to("RAW", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
 		
         /* Calculate Daily Average AggDay[x] */
         min15Stream
@@ -115,7 +118,8 @@ public class Consumer_java {
 		
         /* send raw data */
 		dailyMaxStream
-        .to("DAILY_RAW", Produced.with(Serdes.String(), MeasurementSerde));
+        .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), key.replaceAll("\"", ""))))
+        .to("DAILY_RAW", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
         
         /* Calculate Daily Max AggDay[X] */
         dailyMaxStream

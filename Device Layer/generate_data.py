@@ -80,7 +80,7 @@ while True:
     
     # producer.send('RAW', value={"produceDate":s, "value":generate_thermal_sensor_values()}, key="th1")
     
-    #producer.send('th1', value=th1, key="th1")
+    # producer.send('th1', value=th1, key="th1")
     # producer.send('th2', value=th2)
     
     # producer.send('th1', value=hvac1, key="hvac1")
