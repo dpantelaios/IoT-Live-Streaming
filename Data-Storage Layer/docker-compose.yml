@@ -31,6 +31,8 @@ services:
       - influxdb_data:/var/lib/influxdb
     networks:
       - messaging_broker_layer_default
+      - presentationlayer_default
+
 
 volumes:
   influxdb_data: {}
