@@ -36,8 +36,8 @@ services:
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --list
 
       echo -e 'Creating kafka topics'
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic th1 --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic RAW --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic th1 --replication-factor 1 --partitions 2
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic RAW --replication-factor 1 --partitions 2
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic AGGREGATED --replication-factor 1 --partitions 1
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic e_tot --replication-factor 1 --partitions 1
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic DAILY_RAW --replication-factor 1 --partitions 1
