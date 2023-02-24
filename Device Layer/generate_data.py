@@ -53,6 +53,9 @@ starttime = time.time()
 Etotal = Water_total = 0
 
 hvac1_daily_sum=0
+daily_hvac1=0
+daily_hvac2=0
+dialy_miac1=0
 
 while True:
     # print(starting_date)
@@ -62,9 +65,11 @@ while True:
     th1 = {"produceDate":str(starting_date), "value":str(generate_thermal_sensor_values())}
     th2 = str(starting_date) + " | " + str(generate_thermal_sensor_values())
     hvac1_val = generate_energy_air_conditioner(0, 100)
+    hvac2_val = generate_energy_air_conditioner(0, 200)
+    miac1_val = generate_energy_rest_devices(0, 150)
     hvac1 = {"produceDate":str(starting_date), "value":str(hvac1_val)}
-    hvac2 = str(starting_date) + " | " + str(generate_energy_air_conditioner(0, 200))
-    miac1 = str(starting_date) + " | " + str(generate_energy_rest_devices(0, 150))
+    hvac2 = {"produceDate":str(starting_date), "value":str(hvac2_val)}
+    miac1 = {"produceDate":str(starting_date), "value":str(miac1_val)}
     miac2 = str(starting_date) + " | " + str(generate_energy_rest_devices(0, 200))
     w1 = str(starting_date) + " | " + str(generate_water_consumption())
     
@@ -83,13 +88,16 @@ while True:
     # producer.send('th1', value=th1, key="th1")
     # producer.send('th2', value=th2)
     
-    # producer.send('th1', value=hvac1, key="hvac1")
+    producer.send('th1', value=hvac1, key="hvac1")
+    producer.send('th1', value=hvac2, key="hvac2")
+    producer.send('th1', value=miac1, key="miac1")
+
     # producer.send('hvac2', value=hvac2)
     # producer.send('miac1', value=miac1)
     # producer.send('miac2', value=miac2)
     # producer.send('w1', value=w1)
 
-    
+    # print("hvac1 : {}, hvac2 : {}, miac1 : {},total sum: {}".format(hvac1_val, hvac2_val, miac1_val, daily_hvac1))
 
     if starting_date.hour == 0 and starting_date.minute == 0:
         Etotal += 2600*24 + generate_Energy_total()
@@ -99,15 +107,22 @@ while True:
         timestamps = generate_move_detection_daily(starting_date)
         Etotal_str = str(starting_date) + " | " + str(Etotal)
         Water_total_str = str(starting_date) + " | " + str(Water_total)
-        print("Etot: ", Etotal_str)
+        # print("Etot: ", Etotal_str)
         producer.send('etot', value={"produceDate":str(starting_date), "value":str(Etotal)}, key="etot")
         # print("Water_total_str: ", Water_total_str)
         # producer.send('wtot', value=Water_total_str)
 
         # print("hvac1 daily sum: {}".format(hvac1_daily_sum))
         hvac1_daily_sum=0
+        print("hvac1 daily sum: {}, hvac2 daily sum: {}, miac1 daily sum: {},total sum: {}".format(daily_hvac1, daily_hvac2, dialy_miac1, daily_hvac1+daily_hvac2+dialy_miac1))
+        daily_hvac1 = 0
+        daily_hvac2 = 0
+        dialy_miac1 = 0
     
     hvac1_daily_sum = hvac1_daily_sum + hvac1_val
+    daily_hvac1 = daily_hvac1 + hvac1_val
+    daily_hvac2 = daily_hvac2 + hvac2_val
+    dialy_miac1 = dialy_miac1 + miac1_val
 
     for temp_timestamp in timestamps:
         if temp_timestamp <= starting_date:

@@ -24,6 +24,7 @@ import model.Measurement;
 import model.DiffMeasurement;
 import model.SummedMeasurement;
 import model.EnrichedMeasurement;
+import model.LeakSum;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -34,12 +35,20 @@ import java.util.Set;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Arrays;
+import java.text.DecimalFormat;
+
 
 /* Peek command */
 // .peek((key, value) -> {System.out.println(key.key()); System.out.println(value);})
 
 
 public class Consumer_java {
+
+    SummedMeasurement test;
+    private void updateTest(SummedMeasurement value) {
+        test = value;
+    }
+
 	public static void main(String[] args) {
 
         Set<String> avg15 = new HashSet<String>(Arrays.asList("\"th1\"", "\"th2\""));
@@ -53,10 +62,13 @@ public class Consumer_java {
         Serde<SummedMeasurement> SummedMeasurementSerde = new JsonSerde<>(SummedMeasurement.class);
         Serde<MaxMeasurement> MaxMeasurementSerde = new JsonSerde<>(MaxMeasurement.class);
         Serde<EnrichedMeasurement> EnrichedMeasurementSerde = new JsonSerde<>(EnrichedMeasurement.class);
+        Serde<LeakSum> LeakSumSerde = new JsonSerde<>(LeakSum.class);
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
-        // SimpleDateFormat jsonDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat jsonDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        final DecimalFormat df = new DecimalFormat("0.00");
+
 
         /* 15 MIN DATA */
 
@@ -92,6 +104,7 @@ public class Consumer_java {
         .to("AGGREGATED", Produced.with(Serdes.String(), AverageMeasurementSerde));
 
         /* Calculate Daily Sum AggDay[X] */
+        KStream<String, SummedMeasurement> summedMin15Stream = 
         min15Stream
         .filter((key, value) -> sum15.contains(key))
         .groupByKey()
@@ -99,16 +112,37 @@ public class Consumer_java {
         .aggregate(()-> new SummedMeasurement(0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
                     aggregate.setSum(aggregate.getSum() + value.getValue());
-                    aggregate.setSumDate(value.getProduceDate());
+                    aggregate.setSumDate(value.withouttimeDate());
                     aggregate.setSensorName(key.replaceAll("\"", ""));
                     return aggregate;
                 },
                 Materialized.with(Serdes.String(), SummedMeasurementSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
+        // .foreach((key, value) -> updateTest(value));
         .map((k,v) -> KeyValue.pair(k.key(), v))
+        .map((k,v) -> KeyValue.pair(k, new SummedMeasurement(Double.parseDouble(df.format(v.getSum())), v.getSumDate(), v.getSensorName())));
+
+        summedMin15Stream
         .to("AGGREGATED", Produced.with(Serdes.String(), SummedMeasurementSerde));
         
+        summedMin15Stream
+        // .peek((key, value) -> {System.out.println("start of stream"); System.out.println(key); System.out.println(value);})
+        .groupBy((key, value) -> jsonDateFormat.format(value.getSumDate()), Grouped.with(Serdes.String(), SummedMeasurementSerde))
+        .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
+        .aggregate(() -> new LeakSum(0.0, 0, new Date()),
+                (key, value, aggregate) -> {
+                    aggregate.setLeakSum(aggregate.getLeakSum() + value.getSum());
+                    aggregate.setLeakSumCount(aggregate.getLeakSumCount()+1);
+                    aggregate.setLeakSumDate(value.getSumDate());
+                    return aggregate;
+                },
+                Materialized.with(Serdes.String(), LeakSumSerde))
+        .toStream()
+        .filter((key, value)->value.getLeakSumCount()>=3) //change number to sum15.size
+        .map((k,v) -> KeyValue.pair(k, new LeakSum(Double.parseDouble(df.format(v.getLeakSum())), v.getLeakSumCount(), v.getLeakSumDate())))
+        .peek((key, value) -> {System.out.println("end of stream"); System.out.println(key); System.out.println(value);})
+        ;
         
         /* DAILY DATA */
         KStream<String, Measurement> dailyMaxStream = streamsBuilder.stream("etot",
@@ -159,8 +193,11 @@ public class Consumer_java {
 
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);
+        kafkaStreams.cleanUp();
+
         // Start the application
         kafkaStreams.start();
+
 	}
 
 	private static Properties getConfig() {
