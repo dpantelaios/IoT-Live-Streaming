@@ -51,8 +51,9 @@ producer = KafkaProducer(
 
 starttime = time.time()
 Etotal = Water_total = 0
+two_days_late_w1_count = 0
+ten_days_late_w1_count = 0
 
-hvac1_daily_sum=0
 daily_hvac1=0
 daily_hvac2=0
 daily_miac1=0
@@ -92,11 +93,10 @@ while True:
     # producer.send('th1', value=th1, key="th1")
     # producer.send('th2', value=th2)
     
-    producer.send('th1', value=hvac1, key="hvac1")
-    producer.send('th1', value=hvac2, key="hvac2")
-    producer.send('th1', value=miac1, key="miac1")
-    producer.send('th1', value=w1, key="w1")
-
+    ## producer.send('th1', value=hvac1, key="hvac1")
+    ## producer.send('th1', value=hvac2, key="hvac2")
+    ## producer.send('th1', value=miac1, key="miac1")
+    ## producer.send('th1', value=w1, key="w1")
 
     # producer.send('hvac2', value=hvac2)
     # producer.send('miac1', value=miac1)
@@ -118,19 +118,16 @@ while True:
         Etotal_str = str(starting_date) + " | " + str(Etotal)
         Water_total_str = str(starting_date) + " | " + str(Water_total)
         # print("Etot: ", Etotal_str)
-        producer.send('etot', value={"produceDate":str(starting_date), "value":str(Etotal)}, key="etot")
+        ## producer.send('etot', value={"produceDate":str(starting_date), "value":str(Etotal)}, key="etot")
         # print("Water_total_str: ", Water_total_str)
-        producer.send('etot', value={"produceDate":str(starting_date), "value":str(Water_total)}, key="wtot")
+        # producer.send('etot', value={"produceDate":str(starting_date), "value":str(Water_total)}, key="wtot")
 
-        # print("hvac1 daily sum: {}".format(hvac1_daily_sum))
-        hvac1_daily_sum=0
-        
+        ## print("hvac1 daily sum: {}".format(hvac1_daily_sum))
         daily_hvac1 = 0
         daily_hvac2 = 0
         daily_miac1 = 0
         daily_w1 = 0
     
-    hvac1_daily_sum = hvac1_daily_sum + hvac1_val
     daily_hvac1 = daily_hvac1 + hvac1_val
     daily_hvac2 = daily_hvac2 + hvac2_val
     daily_miac1 = daily_miac1 + miac1_val
@@ -143,6 +140,24 @@ while True:
             # print(mov1)
             # producer.send('mov1', value=mov1)
             timestamps.pop(0)
+    if two_days_late_w1_count == 20:
+        two_days_early_date = starting_date - timedelta.Timedelta(days=2)
+        two_days_late_w1_count = 0
+        two_days_late_w1_val = generate_water_consumption()
+        two_days_late_w1 = {"produceDate":str(two_days_early_date), "value":str(two_days_late_w1_val)}
+        print("current_date: {}, sent_date: {}, w1_value: {}".format(starting_date, two_days_early_date, two_days_late_w1_val))
+        ## producer.send('th1', value=two_days_late_w1, key="two_days_late_w1")
 
+    if ten_days_late_w1_count == 120:
+        ten_days_early_date = starting_date - timedelta.Timedelta(days=10)
+        ten_days_late_w1_count = 0
+        ten_days_late_w1_val = generate_water_consumption()
+        ten_days_late_w1 = {"produceDate":str(ten_days_early_date), "value":str(ten_days_late_w1_val)}
+        print("current_date: {}, sent_date: {}, w1_value: {}".format(starting_date, ten_days_early_date, ten_days_late_w1_val))
+       ## producer.send('th1', value=ten_days_late_w1, key="ten_days_late_w1")
+
+    two_days_late_w1_count += 1
+    ten_days_late_w1_count += 1
+    
     starting_date = starting_date + timedelta.Timedelta(minutes=15)
     time.sleep(msg_interval - ((time.time() - starttime) % msg_interval))
