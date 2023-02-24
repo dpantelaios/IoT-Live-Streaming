@@ -25,6 +25,7 @@ import model.DiffMeasurement;
 import model.SummedMeasurement;
 import model.EnrichedMeasurement;
 import model.LeakSum;
+import model.TotalLeak;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -52,8 +53,12 @@ public class Consumer_java {
 	public static void main(String[] args) {
 
         Set<String> avg15 = new HashSet<String>(Arrays.asList("\"th1\"", "\"th2\""));
-        Set<String> sum15 = new HashSet<String>(Arrays.asList("\"hvac1\"", "\"hvac2\"", "\"miac1\"","\"miac2\"","\"etot\""));
+        Set<String> sum15Energy = new HashSet<String>(Arrays.asList("\"hvac1\"", "\"hvac2\"", "\"miac1\"","\"miac2\""));
+        Set<String> sum15Water = new HashSet<String>(Arrays.asList("\"w1\""));
+        Set<String> daily15Energy = new HashSet<String>(Arrays.asList("\"etot\""));
+        Set<String> daily15Water = new HashSet<String>(Arrays.asList("\"wtot\""));
 
+        
 		//create kafka consumer 
 		Properties properties = getConfig();
 		Serde<Measurement> MeasurementSerde = new JsonSerde<>(Measurement.class);
@@ -63,6 +68,7 @@ public class Consumer_java {
         Serde<MaxMeasurement> MaxMeasurementSerde = new JsonSerde<>(MaxMeasurement.class);
         Serde<EnrichedMeasurement> EnrichedMeasurementSerde = new JsonSerde<>(EnrichedMeasurement.class);
         Serde<LeakSum> LeakSumSerde = new JsonSerde<>(LeakSum.class);
+        Serde<TotalLeak> TotalLeakSerde = new JsonSerde<>(TotalLeak.class);
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
@@ -106,7 +112,7 @@ public class Consumer_java {
         /* Calculate Daily Sum AggDay[X] */
         KStream<String, SummedMeasurement> summedMin15Stream = 
         min15Stream
-        .filter((key, value) -> sum15.contains(key))
+        .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
         .groupByKey()
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         .aggregate(()-> new SummedMeasurement(0.0, new Date(), new String()),
@@ -120,14 +126,15 @@ public class Consumer_java {
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
         // .foreach((key, value) -> updateTest(value));
-        .map((k,v) -> KeyValue.pair(k.key(), v))
-        .map((k,v) -> KeyValue.pair(k, new SummedMeasurement(Double.parseDouble(df.format(v.getSum())), v.getSumDate(), v.getSensorName())));
+        .map((k,v) -> KeyValue.pair(k.key(), new SummedMeasurement(Double.parseDouble(df.format(v.getSum())), v.getSumDate(), v.getSensorName())));
 
         summedMin15Stream
         .to("AGGREGATED", Produced.with(Serdes.String(), SummedMeasurementSerde));
         
+        /* Sum of total daily device energy consumption (e.g. hvac1+hvac2+miac1...) */
+        KStream<String, LeakSum> devicesEnergyStream =
         summedMin15Stream
-        // .peek((key, value) -> {System.out.println("start of stream"); System.out.println(key); System.out.println(value);})
+        .filter((key, value) -> sum15Energy.contains(key)) //we don't want w1 in our sum
         .groupBy((key, value) -> jsonDateFormat.format(value.getSumDate()), Grouped.with(Serdes.String(), SummedMeasurementSerde))
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         .aggregate(() -> new LeakSum(0.0, 0, new Date()),
@@ -139,10 +146,29 @@ public class Consumer_java {
                 },
                 Materialized.with(Serdes.String(), LeakSumSerde))
         .toStream()
-        .filter((key, value)->value.getLeakSumCount()>=3) //change number to sum15.size
-        .map((k,v) -> KeyValue.pair(k, new LeakSum(Double.parseDouble(df.format(v.getLeakSum())), v.getLeakSumCount(), v.getLeakSumDate())))
-        .peek((key, value) -> {System.out.println("end of stream"); System.out.println(key); System.out.println(value);})
+        .filter((key, value)->value.getLeakSumCount()>=3) //change number to sum15Energy.size
+        .map((k,v) -> KeyValue.pair(k.key(), new LeakSum(Double.parseDouble(df.format(v.getLeakSum())), v.getLeakSumCount(), v.getLeakSumDate())))
         ;
+
+        /* Sum of total daily water consumption (in our case just w1)*/
+        KStream<String, LeakSum> devicesWaterStream = 
+        summedMin15Stream
+        .filter((key, value) -> sum15Water.contains(key))
+        .groupBy((key, value) -> jsonDateFormat.format(value.getSumDate()), Grouped.with(Serdes.String(), SummedMeasurementSerde))
+        .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
+        .aggregate(() -> new LeakSum(0.0, 0, new Date()),
+                (key, value, aggregate) -> {
+                    aggregate.setLeakSum(aggregate.getLeakSum() + value.getSum());
+                    aggregate.setLeakSumCount(aggregate.getLeakSumCount()+1);
+                    aggregate.setLeakSumDate(value.getSumDate());
+                    return aggregate;
+                },
+                Materialized.with(Serdes.String(), LeakSumSerde))
+        .toStream()
+        .filter((key, value)->value.getLeakSumCount()>=1) //change number to sum15Water.size
+        .map((k,v) -> KeyValue.pair(k.key(), new LeakSum(Double.parseDouble(df.format(v.getLeakSum())), v.getLeakSumCount(), v.getLeakSumDate())))
+        ;
+
         
         /* DAILY DATA */
         KStream<String, Measurement> dailyMaxStream = streamsBuilder.stream("etot",
@@ -174,6 +200,7 @@ public class Consumer_java {
         .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), MaxMeasurementSerde));
 
         // AggDayDiff[y] (currDay - prevDate)
+        KStream<String, DiffMeasurement> dailyDiffStream = 
         dailyMaxStream
         .groupByKey()
         .windowedBy(TimeWindows.of(Duration.ofDays(2L)).advanceBy(Duration.ofDays(1L)))
@@ -188,10 +215,38 @@ public class Consumer_java {
                 Materialized.with(Serdes.String(), DiffMeasurementSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
-        .map((k,v) -> KeyValue.pair(k.key(), v))
+        .map((k,v) -> KeyValue.pair(k.key(), v));
+
+        /* send to AggDayDiff Stream */
+        dailyDiffStream
         .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), DiffMeasurementSerde));
 
+        /* Stream contains ENERGY only (not water) total daily diff */
+        KStream<String, DiffMeasurement> dailyDiffEnergyTotalStream = 
+        dailyDiffStream
+        .filter((key, value) -> daily15Energy.contains(key))
+        .map((key, value) -> KeyValue.pair(jsonDateFormat.format(value.getDiffDate()), value));
 
+        /* Stream contains WATER only (not energy) total daily diff */
+        KStream<String, DiffMeasurement> dailyDiffWaterTotalStream = 
+        dailyDiffStream
+        .filter((key, value) -> daily15Water.contains(key))
+        .map((key, value) -> KeyValue.pair(jsonDateFormat.format(value.getDiffDate()), value));
+
+        /* Calculate leakage by joining dailyDiffEnergyTotalStream with devicesEnergyStream and subtracting the values */
+        ValueJoiner<DiffMeasurement, LeakSum, TotalLeak> leakJoiner = (diffEnergy, summedEnergy) ->
+            new TotalLeak(diffEnergy.getCurrentValue(), summedEnergy.getLeakSum(), diffEnergy.getDiffDate());
+
+        KStream<String, TotalLeak> EnergyLeakStream = dailyDiffEnergyTotalStream.join(devicesEnergyStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
+
+        EnergyLeakStream
+        .peek((key, value) -> {System.out.println("energy_joined_start"); System.out.println(key); System.out.println(value);});
+        
+        KStream<String, TotalLeak> WaterLeakStream = dailyDiffWaterTotalStream.join(devicesWaterStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
+
+        WaterLeakStream
+        .peek((key, value) -> {System.out.println("water_joined_start"); System.out.println(key); System.out.println(value);});
+    
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);
         kafkaStreams.cleanUp();
 

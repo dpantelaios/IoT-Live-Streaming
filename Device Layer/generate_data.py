@@ -55,7 +55,10 @@ Etotal = Water_total = 0
 hvac1_daily_sum=0
 daily_hvac1=0
 daily_hvac2=0
-dialy_miac1=0
+daily_miac1=0
+dailyEtotal=0
+daily_w1 = 0
+dailyWtot=0
 
 while True:
     # print(starting_date)
@@ -71,7 +74,8 @@ while True:
     hvac2 = {"produceDate":str(starting_date), "value":str(hvac2_val)}
     miac1 = {"produceDate":str(starting_date), "value":str(miac1_val)}
     miac2 = str(starting_date) + " | " + str(generate_energy_rest_devices(0, 200))
-    w1 = str(starting_date) + " | " + str(generate_water_consumption())
+    w1_val = generate_water_consumption()
+    w1 = {"produceDate":str(starting_date), "value":str(w1_val)}
     
     # print("TH1: ", th1)
     # print("TH2: ", th2)
@@ -91,6 +95,8 @@ while True:
     producer.send('th1', value=hvac1, key="hvac1")
     producer.send('th1', value=hvac2, key="hvac2")
     producer.send('th1', value=miac1, key="miac1")
+    producer.send('th1', value=w1, key="w1")
+
 
     # producer.send('hvac2', value=hvac2)
     # producer.send('miac1', value=miac1)
@@ -100,9 +106,13 @@ while True:
     # print("hvac1 : {}, hvac2 : {}, miac1 : {},total sum: {}".format(hvac1_val, hvac2_val, miac1_val, daily_hvac1))
 
     if starting_date.hour == 0 and starting_date.minute == 0:
-        Etotal += 2600*24 + generate_Energy_total()
+        print("hvac1 daily sum: {}, hvac2 daily sum: {}, miac1 daily sum: {}\nenergy total: {}, device sum: {}, difference: {}".format(daily_hvac1, daily_hvac2, daily_miac1, dailyEtotal, daily_hvac1+daily_hvac2+daily_miac1, dailyEtotal-(daily_hvac1+daily_hvac2+daily_miac1)))
+        print("w1 dail sum: {}, Wtot: {}, difference: {}".format(daily_w1, dailyWtot, dailyWtot-daily_w1))
+        dailyEtotal = 2600*24 + generate_Energy_total()
+        Etotal += dailyEtotal
         Etotal = round(Etotal, 2)
-        Water_total += generate_total_water_consumptions()
+        dailyWtot = generate_total_water_consumptions()
+        Water_total += dailyWtot
         Water_total = round(Water_total, 2)
         timestamps = generate_move_detection_daily(starting_date)
         Etotal_str = str(starting_date) + " | " + str(Etotal)
@@ -110,19 +120,21 @@ while True:
         # print("Etot: ", Etotal_str)
         producer.send('etot', value={"produceDate":str(starting_date), "value":str(Etotal)}, key="etot")
         # print("Water_total_str: ", Water_total_str)
-        # producer.send('wtot', value=Water_total_str)
+        producer.send('etot', value={"produceDate":str(starting_date), "value":str(Water_total)}, key="wtot")
 
         # print("hvac1 daily sum: {}".format(hvac1_daily_sum))
         hvac1_daily_sum=0
-        print("hvac1 daily sum: {}, hvac2 daily sum: {}, miac1 daily sum: {},total sum: {}".format(daily_hvac1, daily_hvac2, dialy_miac1, daily_hvac1+daily_hvac2+dialy_miac1))
+        
         daily_hvac1 = 0
         daily_hvac2 = 0
-        dialy_miac1 = 0
+        daily_miac1 = 0
+        daily_w1 = 0
     
     hvac1_daily_sum = hvac1_daily_sum + hvac1_val
     daily_hvac1 = daily_hvac1 + hvac1_val
     daily_hvac2 = daily_hvac2 + hvac2_val
-    dialy_miac1 = dialy_miac1 + miac1_val
+    daily_miac1 = daily_miac1 + miac1_val
+    daily_w1 += w1_val
 
     for temp_timestamp in timestamps:
         if temp_timestamp <= starting_date:
