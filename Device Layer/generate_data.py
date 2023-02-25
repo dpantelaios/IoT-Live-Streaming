@@ -146,7 +146,7 @@ while True:
         two_days_late_w1_val = generate_water_consumption()
         two_days_late_w1 = {"produceDate":str(two_days_early_date), "value":str(two_days_late_w1_val)}
         print("current_date: {}, sent_date: {}, w1_value: {}".format(starting_date, two_days_early_date, two_days_late_w1_val))
-        ## producer.send('th1', value=two_days_late_w1, key="two_days_late_w1")
+        ## producer.send('th1', value=two_days_late_w1, key="w1")
 
     if ten_days_late_w1_count == 120:
         ten_days_early_date = starting_date - timedelta.Timedelta(days=10)
@@ -154,7 +154,7 @@ while True:
         ten_days_late_w1_val = generate_water_consumption()
         ten_days_late_w1 = {"produceDate":str(ten_days_early_date), "value":str(ten_days_late_w1_val)}
         print("current_date: {}, sent_date: {}, w1_value: {}".format(starting_date, ten_days_early_date, ten_days_late_w1_val))
-       ## producer.send('th1', value=ten_days_late_w1, key="ten_days_late_w1")
+       ## producer.send('th1', value=ten_days_late_w1, key="w1")
 
     two_days_late_w1_count += 1
     ten_days_late_w1_count += 1
