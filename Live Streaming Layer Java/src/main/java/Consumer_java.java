@@ -26,6 +26,7 @@ import model.SummedMeasurement;
 import model.EnrichedMeasurement;
 import model.LeakSum;
 import model.TotalLeak;
+import model.FilterLateEvents;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -37,6 +38,8 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Arrays;
 import java.text.DecimalFormat;
+import java.util.*;
+
 
 
 /* Peek command */
@@ -69,6 +72,7 @@ public class Consumer_java {
         Serde<EnrichedMeasurement> EnrichedMeasurementSerde = new JsonSerde<>(EnrichedMeasurement.class);
         Serde<LeakSum> LeakSumSerde = new JsonSerde<>(LeakSum.class);
         Serde<TotalLeak> TotalLeakSerde = new JsonSerde<>(TotalLeak.class);
+        Serde<FilterLateEvents> FilterLateEventsSerde = new JsonSerde<>(FilterLateEvents.class);
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
@@ -108,12 +112,42 @@ public class Consumer_java {
         .toStream()
         .map((k,v) -> KeyValue.pair(k.key(), v))
         .to("AGGREGATED", Produced.with(Serdes.String(), AverageMeasurementSerde));
+        
+        // 
+        // 
+        // NEW STREAM!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // 
+        // 
+        KStream<String, Measurement> filteredMin15Stream = 
+        min15Stream
+        .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
+        .groupByKey()
+        .aggregate(()-> new FilterLateEvents("false", new Date(1588338000), 0.0, new Date()),
+                (key, value, aggregate) -> {
+                    aggregate.setIsLateEvent(aggregate.lateEvent(value.getProduceDate()));
+                    // aggregate.setMaxDate(new Date(Math.max(aggregate.getMaxDate().getTime(), value.getProduceDate().getTime())));
+                    aggregate.updateMaxDate(value.getProduceDate());
+                    aggregate.setFilteredValue(value.getValue());
+                    aggregate.setFilteredProduceDate(value.getProduceDate());
+                    return aggregate;
+                },
+                Materialized.with(Serdes.String(), FilterLateEventsSerde))
+        .toStream()
+        .filter((key, value) -> value.getIsLateEvent() == "true")
+        .map((k,v) -> KeyValue.pair(k, new Measurement(v.getFilteredValue(), v.getFilteredProduceDate())))
+        .peek((key, value) -> {System.out.println("filtered_end"); System.out.println(key); System.out.println(value);});
+        // 
+        // 
+        // ENDDDDD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // 
+        // 
+
 
         /* Calculate Daily Sum AggDay[X] */
         KStream<String, SummedMeasurement> summedMin15Stream = 
         min15Stream
         .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
-        .groupByKey()
+        .groupByKey(Serialized.with(Serdes.String(), MeasurementSerde))
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         .aggregate(()-> new SummedMeasurement(0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
@@ -260,6 +294,7 @@ public class Consumer_java {
         properties.put(StreamsConfig.APPLICATION_ID_CONFIG, "LiveStreamingLayer");
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:29090");
         properties.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        // properties.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         properties.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         properties.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
