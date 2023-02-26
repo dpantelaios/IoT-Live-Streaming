@@ -11,7 +11,12 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.internals.InternalTopologyBuilder.StateStoreFactory;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.state.StoreSupplier;
+import org.apache.kafka.streams.processor.*;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,6 +32,9 @@ import model.EnrichedMeasurement;
 import model.LeakSum;
 import model.TotalLeak;
 import model.FilterLateEvents;
+import model.FlaggedMeasurement;
+import model.AcceptedMeasurement;
+import model.RejectedMeasurement;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -73,13 +81,24 @@ public class Consumer_java {
         Serde<LeakSum> LeakSumSerde = new JsonSerde<>(LeakSum.class);
         Serde<TotalLeak> TotalLeakSerde = new JsonSerde<>(TotalLeak.class);
         Serde<FilterLateEvents> FilterLateEventsSerde = new JsonSerde<>(FilterLateEvents.class);
+        Serde<AcceptedMeasurement> AcceptedMeasurementSerde = new JsonSerde<>(AcceptedMeasurement.class);
+        Serde<RejectedMeasurement> RejectedMeasurementSerde = new JsonSerde<>(RejectedMeasurement.class);
+        Serde<FlaggedMeasurement> FlaggedMeasurementSerde = new JsonSerde<>(FlaggedMeasurement.class);
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat jsonDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         final DecimalFormat df = new DecimalFormat("0.00");
 
+        StoreBuilder<KeyValueStore<String, Measurement>> filterStoreSupplier =
+                Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore("filter"),
+                Serdes.String(),
+                MeasurementSerde
+                );
+        KeyValueStore<String, Measurement> filterStore = filterStoreSupplier.build();
+        streamsBuilder.addStateStore(filterStoreSupplier);
 
+    
         /* 15 MIN DATA */
 
         /* stream to consume from 15min average topics and extract proper timestamps */
@@ -88,13 +107,59 @@ public class Consumer_java {
                 .withTimestampExtractor(new MeasurementTimeExtractor())
                 );
 		
+        /* filter late rejected events into filteredMin15Stream[1] */
+        // KStream<String, FilterLateEvents>[] filteredMin15Stream = //need to add [] for branches
+        // min15Stream
+        // // .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
+        // .groupByKey()
+        // .aggregate(()-> new FilterLateEvents("false", new Date(1588338000), 0.0, new Date()),
+        //         (key, value, aggregate) -> {
+        //             aggregate.setIsLateEvent(aggregate.lateEvent(value.getProduceDate()));
+        //             // aggregate.setMaxDate(new Date(Math.max(aggregate.getMaxDate().getTime(), value.getProduceDate().getTime())));
+        //             aggregate.updateMaxDate(value.getProduceDate());
+        //             aggregate.setFilteredValue(value.getValue());
+        //             aggregate.setFilteredProduceDate(value.getProduceDate());
+        //             return aggregate;
+        //         },
+        //         Materialized.with(Serdes.String(), FilterLateEventsSerde))
+        // .toStream()
+        // // .filter((key, value) -> value.getIsLateEvent() == "false")
+        // // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
+        // // .peek((key, value) -> {System.out.println("filtered_end"); System.out.println(key); System.out.println(value);})
+        // .branch(
+        //     (key, value) -> value.getIsLateEvent()=="false",
+        //     (key, value) -> value.getIsLateEvent()=="true"
+        //     )
+        // ;
+        
+        KStream<String, AcceptedMeasurement> filteredMin15Stream =
+        min15Stream
+        .transform(()->new filteringTransformer(1589673600000L), "filter")
+        .filter((key, value) -> value.getIsRejected()=="false")
+        .map((key, value) -> KeyValue.pair(key, new AcceptedMeasurement(value.getValue(), value.getProduceDate())))
+        ;
+
+        KStream<String, RejectedMeasurement> RejectedMin15Stream =
+        min15Stream
+        .transform(()->new filteringTransformer(1589673600000L), "filter")
+        .filter((key, value) -> value.getIsRejected()=="true")
+        .map((key, value) -> KeyValue.pair(key, new RejectedMeasurement(value.getValue(), value.getProduceDate())))
+        // .peek((key, value) -> {System.out.print("Rejected data: "); System.out.println(key); System.out.println(value);})
+        ;
+
+        //
         /* send raw data */
-		min15Stream
+		// min15Stream
+        filteredMin15Stream
+        // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
         .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), key.replaceAll("\"", ""))))
         .to("RAW", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
 		
         /* Calculate Daily Average AggDay[x] */
-        min15Stream
+        // filteredMin15Stream[0]
+        // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
+        // min15Stream
+        filteredMin15Stream
         .filter((key, value) -> avg15.contains(key))
         .groupByKey()
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
@@ -113,42 +178,31 @@ public class Consumer_java {
         .map((k,v) -> KeyValue.pair(k.key(), v))
         .to("AGGREGATED", Produced.with(Serdes.String(), AverageMeasurementSerde));
         
-        // 
-        // 
-        // NEW STREAM!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // 
-        // 
-        KStream<String, Measurement> filteredMin15Stream = 
-        min15Stream
-        .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
-        .groupByKey()
-        .aggregate(()-> new FilterLateEvents("false", new Date(1588338000), 0.0, new Date()),
-                (key, value, aggregate) -> {
-                    aggregate.setIsLateEvent(aggregate.lateEvent(value.getProduceDate()));
-                    // aggregate.setMaxDate(new Date(Math.max(aggregate.getMaxDate().getTime(), value.getProduceDate().getTime())));
-                    aggregate.updateMaxDate(value.getProduceDate());
-                    aggregate.setFilteredValue(value.getValue());
-                    aggregate.setFilteredProduceDate(value.getProduceDate());
-                    return aggregate;
-                },
-                Materialized.with(Serdes.String(), FilterLateEventsSerde))
-        .toStream()
-        .filter((key, value) -> value.getIsLateEvent() == "true")
-        .map((k,v) -> KeyValue.pair(k, new Measurement(v.getFilteredValue(), v.getFilteredProduceDate())))
-        .peek((key, value) -> {System.out.println("filtered_end"); System.out.println(key); System.out.println(value);});
-        // 
-        // 
-        // ENDDDDD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // 
-        // 
+        
+        // StoreSupplier filterStore = Stores.create("Filter").withKeys(Serdes.String()).withValues(FlaggedMeasurementSerde).persistent().build();
+        
 
+        // KStream<String, FlaggedMeasurement> lateRejectedEventsStream = 
+        // min15Stream.transform(()->new filteringTransformer(1589673600000L), "filter")
+        // // .map((k,v) -> KeyValue.pair(k, new RejectedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
+        // .peek((key, value) -> {System.out.println("filtered_end"); System.out.println(key); System.out.println(value);})
+        // // .to("RAW", Produced.with(Serdes.String(), AcceptedMeasurementSerde))
+        // ;
+
+        
 
         /* Calculate Daily Sum AggDay[X] */
         KStream<String, SummedMeasurement> summedMin15Stream = 
-        min15Stream
+        // filteredMin15Stream[0]
+        // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate()))) //accepted inputs (not late rejected)
+        // .peek((key, value) -> {System.out.print("Filtered data: "); System.out.println(key); System.out.println(value);})
+        // min15Stream
+        filteredMin15Stream
+
         .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
-        .groupByKey(Serialized.with(Serdes.String(), MeasurementSerde))
-        .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
+        .groupByKey(Serialized.with(Serdes.String(), AcceptedMeasurementSerde))
+        // .groupByKey(Serialized.with(Serdes.String(), AcceptedMeasurementSerde))
+        .windowedBy(TimeWindows.of(Duration.ofDays(1L)).grace(Duration.ofDays(2L)).until(259200000L))
         .aggregate(()-> new SummedMeasurement(0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
                     aggregate.setSum(aggregate.getSum() + value.getValue());
@@ -160,7 +214,9 @@ public class Consumer_java {
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
         // .foreach((key, value) -> updateTest(value));
-        .map((k,v) -> KeyValue.pair(k.key(), new SummedMeasurement(Double.parseDouble(df.format(v.getSum())), v.getSumDate(), v.getSensorName())));
+        .map((k,v) -> KeyValue.pair(k.key(), new SummedMeasurement(Double.parseDouble(df.format(v.getSum())), v.getSumDate(), v.getSensorName())))
+        .peek((key, value) -> {/*System.out.print("SUM: "); System.out.println(key);*/ System.out.println(value);})
+        ;
 
         summedMin15Stream
         .to("AGGREGATED", Produced.with(Serdes.String(), SummedMeasurementSerde));
@@ -294,7 +350,6 @@ public class Consumer_java {
         properties.put(StreamsConfig.APPLICATION_ID_CONFIG, "LiveStreamingLayer");
         properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:29090");
         properties.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        // properties.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         properties.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         properties.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
