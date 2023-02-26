@@ -60,6 +60,7 @@ daily_miac1=0
 dailyEtotal=0
 daily_w1 = 0
 dailyWtot=0
+total_moves = 0
 
 while True:
     # print(starting_date)
@@ -136,9 +137,11 @@ while True:
     for temp_timestamp in timestamps:
         if temp_timestamp <= starting_date:
             # print("SENT MOVE DETECTION")
-            mov1 = str(temp_timestamp) + " | 1"
+            total_moves += 1
+            mov1 = {"produceDate":str(starting_date), "value":1}
             # print(mov1)
-            # producer.send('mov1', value=mov1)
+            producer.send('moveDetection', value=mov1, key="moveDetection")
+            print("MOVE DETECTION: current_date: {}, total_move_detections: {}".format(starting_date, total_moves))
             timestamps.pop(0)
 
     if two_days_late_w1_count == 20:
@@ -146,7 +149,7 @@ while True:
         two_days_late_w1_count = 0
         two_days_late_w1_val = generate_water_consumption()
         two_days_late_w1 = {"produceDate":str(two_days_early_date), "value":str(two_days_late_w1_val)}
-        print("Late accepted: current_date: {}, sent_date: {}, w1_value: {}".format(starting_date, two_days_early_date, two_days_late_w1_val))
+        # print("Late accepted: current_date: {}, sent_date: {}, w1_value: {}".format(starting_date, two_days_early_date, two_days_late_w1_val))
         producer.send('th1', value=two_days_late_w1, key="w1")
 
     if ten_days_late_w1_count == 120:

@@ -35,6 +35,7 @@ import model.FilterLateEvents;
 import model.FlaggedMeasurement;
 import model.AcceptedMeasurement;
 import model.RejectedMeasurement;
+import model.TotalMovesMeasurement;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -84,6 +85,7 @@ public class Consumer_java {
         Serde<AcceptedMeasurement> AcceptedMeasurementSerde = new JsonSerde<>(AcceptedMeasurement.class);
         Serde<RejectedMeasurement> RejectedMeasurementSerde = new JsonSerde<>(RejectedMeasurement.class);
         Serde<FlaggedMeasurement> FlaggedMeasurementSerde = new JsonSerde<>(FlaggedMeasurement.class);
+        Serde<TotalMovesMeasurement> TotalMovesMeasurementSerde = new JsonSerde<>(TotalMovesMeasurement.class);
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
@@ -96,7 +98,16 @@ public class Consumer_java {
                 MeasurementSerde
                 );
         KeyValueStore<String, Measurement> filterStore = filterStoreSupplier.build();
+
+        StoreBuilder<KeyValueStore<String, Measurement>> totalMovesStoreSupplier =
+                Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore("totalMoves"),
+                Serdes.String(),
+                MeasurementSerde
+                );
+        KeyValueStore<String, Measurement> totalMovesStore = totalMovesStoreSupplier.build();
+
         streamsBuilder.addStateStore(filterStoreSupplier);
+        streamsBuilder.addStateStore(totalMovesStoreSupplier);
 
     
         /* 15 MIN DATA */
@@ -131,7 +142,7 @@ public class Consumer_java {
         //     (key, value) -> value.getIsLateEvent()=="true"
         //     )
         // ;
-        
+    
         KStream<String, AcceptedMeasurement> filteredMin15Stream =
         min15Stream
         .transform(()->new filteringTransformer(1589673600000L), "filter")
@@ -336,7 +347,20 @@ public class Consumer_java {
 
         WaterLeakStream
         .peek((key, value) -> {System.out.println("water_joined_start"); System.out.println(key); System.out.println(value);});
-    
+        
+        //Consume Move Detection Measurements
+        KStream<String, Measurement> moveDetectionStream = streamsBuilder.stream("moveDetection",
+				Consumed.with(Serdes.String(), MeasurementSerde)
+                .withTimestampExtractor(new MeasurementTimeExtractor())
+                );
+        
+        KStream<String, TotalMovesMeasurement> totalMoveDetectionStream =
+        moveDetectionStream
+        .transform(()->new totalMovesTransformer(), "totalMoves")
+        // .filter((key, value) -> value.getIsRejected()=="false")
+        // .map((key, value) -> KeyValue.pair(key, new AcceptedMeasurement(value.getValue(), value.getProduceDate())))
+        .peek((key, value) -> {System.out.println("total_moves_end"); System.out.println(key); System.out.println(value);});
+
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);
         kafkaStreams.cleanUp();
 
