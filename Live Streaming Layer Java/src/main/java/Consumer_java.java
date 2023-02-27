@@ -109,7 +109,7 @@ public class Consumer_java {
         .map((key, value) -> KeyValue.pair(key, new RejectedMeasurement(value.getValue(), value.getProduceDate())))
         ;
         RejectedMin15Stream
-        .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), "LateRejected" + key.replaceAll("\"", ""))))
+        .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), "LateRejected_" + key.replaceAll("\"", ""))))
         .to("lateRejected", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
 
         /* send raw data */
@@ -273,14 +273,14 @@ public class Consumer_java {
         KStream<String, TotalLeak> EnergyLeakStream = dailyDiffEnergyTotalStream.join(devicesEnergyStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
 
         EnergyLeakStream
-        .peek((key, value) -> {System.out.println("energy_joined_start"); System.out.println(key); System.out.println(value);})
+        // .peek((key, value) -> {System.out.println("energy_joined_start"); System.out.println(key); System.out.println(value);})
         .map((key, value) -> KeyValue.pair(key, new TotalLeak(value.getLeak(), value.getLeakDate(), "Energy")))
         .to("leaks", Produced.with(Serdes.String(), TotalLeakSerde));
         
         KStream<String, TotalLeak> WaterLeakStream = dailyDiffWaterTotalStream.join(devicesWaterStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
 
         WaterLeakStream
-        .peek((key, value) -> {System.out.println("water_joined_start"); System.out.println(key); System.out.println(value);})
+        // .peek((key, value) -> {System.out.println("water_joined_start"); System.out.println(key); System.out.println(value);})
         .map((key, value) -> KeyValue.pair(key, new TotalLeak(value.getLeak(), value.getLeakDate(), "Water")))
         .to("leaks", Produced.with(Serdes.String(), TotalLeakSerde));
         
