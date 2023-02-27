@@ -1,31 +1,24 @@
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import lombok.SneakyThrows;
 
 import model.Measurement;
 import model.FlaggedMeasurement;
 
-public class filteringTransformer implements Transformer<String, Measurement, KeyValue<String, FlaggedMeasurement>>{
+public class FilteringTransformer implements Transformer<String, Measurement, KeyValue<String, FlaggedMeasurement>>{
 
     private ProcessorContext context;
     private long lastSeen;
     private String stateStoreName;
     
 
-    public filteringTransformer(long lastSeen) {
+    public FilteringTransformer(long lastSeen) {
         this.lastSeen = lastSeen;
     }
 
     @Override
     public void init(ProcessorContext context) {
         this.context = context;
-
-        // this.lastSeen = 1589673600000L;
     }
 
     @Override
@@ -40,7 +33,6 @@ public class filteringTransformer implements Transformer<String, Measurement, Ke
             if(lastSeen<valueTime)
                 lastSeen=valueTime;
         }
-        // System.out.println(lastSeen);
         return KeyValue.pair(key, newVal);
     }
 

@@ -1,26 +1,14 @@
-import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.internals.InternalTopologyBuilder.StateStoreFactory;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
-import org.apache.kafka.streams.state.StoreSupplier;
-import org.apache.kafka.streams.processor.*;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import model.AverageMeasurement;
 import model.JsonSerde;
@@ -31,24 +19,19 @@ import model.SummedMeasurement;
 import model.EnrichedMeasurement;
 import model.LeakSum;
 import model.TotalLeak;
-import model.FilterLateEvents;
 import model.FlaggedMeasurement;
 import model.AcceptedMeasurement;
 import model.RejectedMeasurement;
 import model.TotalMovesMeasurement;
 
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Arrays;
 import java.text.DecimalFormat;
-import java.util.*;
-
 
 
 /* Peek command */
@@ -56,11 +39,6 @@ import java.util.*;
 
 
 public class Consumer_java {
-
-    SummedMeasurement test;
-    private void updateTest(SummedMeasurement value) {
-        test = value;
-    }
 
 	public static void main(String[] args) {
 
@@ -81,14 +59,12 @@ public class Consumer_java {
         Serde<EnrichedMeasurement> EnrichedMeasurementSerde = new JsonSerde<>(EnrichedMeasurement.class);
         Serde<LeakSum> LeakSumSerde = new JsonSerde<>(LeakSum.class);
         Serde<TotalLeak> TotalLeakSerde = new JsonSerde<>(TotalLeak.class);
-        Serde<FilterLateEvents> FilterLateEventsSerde = new JsonSerde<>(FilterLateEvents.class);
         Serde<AcceptedMeasurement> AcceptedMeasurementSerde = new JsonSerde<>(AcceptedMeasurement.class);
         Serde<RejectedMeasurement> RejectedMeasurementSerde = new JsonSerde<>(RejectedMeasurement.class);
         Serde<FlaggedMeasurement> FlaggedMeasurementSerde = new JsonSerde<>(FlaggedMeasurement.class);
         Serde<TotalMovesMeasurement> TotalMovesMeasurementSerde = new JsonSerde<>(TotalMovesMeasurement.class);
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        DateFormat extractDateNoTime = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat jsonDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         final DecimalFormat df = new DecimalFormat("0.00");
 
@@ -113,66 +89,38 @@ public class Consumer_java {
         /* 15 MIN DATA */
 
         /* stream to consume from 15min average topics and extract proper timestamps */
-		KStream<String, Measurement> min15Stream = streamsBuilder.stream("th1",
+		KStream<String, Measurement> min15Stream = streamsBuilder.stream("min15",
 				Consumed.with(Serdes.String(), MeasurementSerde)
                 .withTimestampExtractor(new MeasurementTimeExtractor())
                 );
-		
-        /* filter late rejected events into filteredMin15Stream[1] */
-        // KStream<String, FilterLateEvents>[] filteredMin15Stream = //need to add [] for branches
-        // min15Stream
-        // // .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
-        // .groupByKey()
-        // .aggregate(()-> new FilterLateEvents("false", new Date(1588338000), 0.0, new Date()),
-        //         (key, value, aggregate) -> {
-        //             aggregate.setIsLateEvent(aggregate.lateEvent(value.getProduceDate()));
-        //             // aggregate.setMaxDate(new Date(Math.max(aggregate.getMaxDate().getTime(), value.getProduceDate().getTime())));
-        //             aggregate.updateMaxDate(value.getProduceDate());
-        //             aggregate.setFilteredValue(value.getValue());
-        //             aggregate.setFilteredProduceDate(value.getProduceDate());
-        //             return aggregate;
-        //         },
-        //         Materialized.with(Serdes.String(), FilterLateEventsSerde))
-        // .toStream()
-        // // .filter((key, value) -> value.getIsLateEvent() == "false")
-        // // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
-        // // .peek((key, value) -> {System.out.println("filtered_end"); System.out.println(key); System.out.println(value);})
-        // .branch(
-        //     (key, value) -> value.getIsLateEvent()=="false",
-        //     (key, value) -> value.getIsLateEvent()=="true"
-        //     )
-        // ;
+	
     
         KStream<String, AcceptedMeasurement> filteredMin15Stream =
         min15Stream
-        .transform(()->new filteringTransformer(1589673600000L), "filter")
+        .transform(()->new FilteringTransformer(1589673600000L), "filter")
         .filter((key, value) -> value.getIsRejected()=="false")
         .map((key, value) -> KeyValue.pair(key, new AcceptedMeasurement(value.getValue(), value.getProduceDate())))
         ;
 
         KStream<String, RejectedMeasurement> RejectedMin15Stream =
         min15Stream
-        .transform(()->new filteringTransformer(1589673600000L), "filter")
+        .transform(()->new FilteringTransformer(1589673600000L), "filter")
         .filter((key, value) -> value.getIsRejected()=="true")
         .map((key, value) -> KeyValue.pair(key, new RejectedMeasurement(value.getValue(), value.getProduceDate())))
-        // .peek((key, value) -> {System.out.print("Rejected data: "); System.out.println(key); System.out.println(value);})
         ;
+        RejectedMin15Stream
+        .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), "LateRejected" + key.replaceAll("\"", ""))))
+        .to("lateRejected", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
 
-        //
         /* send raw data */
-		// min15Stream
         filteredMin15Stream
-        // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
         .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), key.replaceAll("\"", ""))))
-        .to("RAW", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
+        .to("raw", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
 		
-        /* Calculate Daily Average AggDay[x] */
-        // filteredMin15Stream[0]
-        // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
-        // min15Stream
+        /* Calculate Daily Average AggDay[x] and send it to appropriate topic*/
         filteredMin15Stream
         .filter((key, value) -> avg15.contains(key))
-        .groupByKey()
+        .groupByKey(Grouped.with(Serdes.String(), AcceptedMeasurementSerde))
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         .aggregate(()-> new AverageMeasurement(0.0, 0, 0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
@@ -187,62 +135,43 @@ public class Consumer_java {
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
         .map((k,v) -> KeyValue.pair(k.key(), v))
-        .to("AGGREGATED", Produced.with(Serdes.String(), AverageMeasurementSerde));
-        
-        
-        // StoreSupplier filterStore = Stores.create("Filter").withKeys(Serdes.String()).withValues(FlaggedMeasurementSerde).persistent().build();
-        
-
-        // KStream<String, FlaggedMeasurement> lateRejectedEventsStream = 
-        // min15Stream.transform(()->new filteringTransformer(1589673600000L), "filter")
-        // // .map((k,v) -> KeyValue.pair(k, new RejectedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate())))
-        // .peek((key, value) -> {System.out.println("filtered_end"); System.out.println(key); System.out.println(value);})
-        // // .to("RAW", Produced.with(Serdes.String(), AcceptedMeasurementSerde))
-        // ;
-
-        
-
-        /* Calculate Daily Sum AggDay[X] */
+        .to("aggDay15min", Produced.with(Serdes.String(), AverageMeasurementSerde));
+       
+    
+        /* Calculate Daily Sum AggDay[X] and save the stream to use for further calculations*/
         KStream<String, SummedMeasurement> summedMin15Stream = 
-        // filteredMin15Stream[0]
-        // .map((k,v) -> KeyValue.pair(k, new AcceptedMeasurement(v.getFilteredValue(), v.getFilteredProduceDate()))) //accepted inputs (not late rejected)
-        // .peek((key, value) -> {System.out.print("Filtered data: "); System.out.println(key); System.out.println(value);})
-        // min15Stream
         filteredMin15Stream
-
         .filter((key, value) -> sum15Energy.contains(key) || sum15Water.contains(key))
-        .groupByKey(Serialized.with(Serdes.String(), AcceptedMeasurementSerde))
-        // .groupByKey(Serialized.with(Serdes.String(), AcceptedMeasurementSerde))
+        .groupByKey(Grouped.with(Serdes.String(), AcceptedMeasurementSerde))
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)).grace(Duration.ofDays(2L)).until(259200000L))
         .aggregate(()-> new SummedMeasurement(0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
                     aggregate.setSum(aggregate.getSum() + value.getValue());
-                    aggregate.setSumDate(value.withouttimeDate());
+                    aggregate.setAggregationDate(value.withouttimeDate());
                     aggregate.setSensorName(key.replaceAll("\"", ""));
                     return aggregate;
                 },
                 Materialized.with(Serdes.String(), SummedMeasurementSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
-        // .foreach((key, value) -> updateTest(value));
-        .map((k,v) -> KeyValue.pair(k.key(), new SummedMeasurement(Double.parseDouble(df.format(v.getSum())), v.getSumDate(), v.getSensorName())))
-        .peek((key, value) -> {/*System.out.print("SUM: "); System.out.println(key);*/ System.out.println(value);})
+        .map((k,v) -> KeyValue.pair(k.key(), new SummedMeasurement(Double.parseDouble(df.format(v.getSum())), v.getAggregationDate(), v.getSensorName())))
         ;
 
+        /* send sum to AGGREGATED topic */
         summedMin15Stream
-        .to("AGGREGATED", Produced.with(Serdes.String(), SummedMeasurementSerde));
+        .to("aggDay15min", Produced.with(Serdes.String(), SummedMeasurementSerde));
         
         /* Sum of total daily device energy consumption (e.g. hvac1+hvac2+miac1...) */
         KStream<String, LeakSum> devicesEnergyStream =
         summedMin15Stream
         .filter((key, value) -> sum15Energy.contains(key)) //we don't want w1 in our sum
-        .groupBy((key, value) -> jsonDateFormat.format(value.getSumDate()), Grouped.with(Serdes.String(), SummedMeasurementSerde))
+        .groupBy((key, value) -> jsonDateFormat.format(value.getAggregationDate()), Grouped.with(Serdes.String(), SummedMeasurementSerde))
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         .aggregate(() -> new LeakSum(0.0, 0, new Date()),
                 (key, value, aggregate) -> {
                     aggregate.setLeakSum(aggregate.getLeakSum() + value.getSum());
                     aggregate.setLeakSumCount(aggregate.getLeakSumCount()+1);
-                    aggregate.setLeakSumDate(value.getSumDate());
+                    aggregate.setLeakSumDate(value.getAggregationDate());
                     return aggregate;
                 },
                 Materialized.with(Serdes.String(), LeakSumSerde))
@@ -255,13 +184,13 @@ public class Consumer_java {
         KStream<String, LeakSum> devicesWaterStream = 
         summedMin15Stream
         .filter((key, value) -> sum15Water.contains(key))
-        .groupBy((key, value) -> jsonDateFormat.format(value.getSumDate()), Grouped.with(Serdes.String(), SummedMeasurementSerde))
+        .groupBy((key, value) -> jsonDateFormat.format(value.getAggregationDate()), Grouped.with(Serdes.String(), SummedMeasurementSerde))
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         .aggregate(() -> new LeakSum(0.0, 0, new Date()),
                 (key, value, aggregate) -> {
                     aggregate.setLeakSum(aggregate.getLeakSum() + value.getSum());
                     aggregate.setLeakSumCount(aggregate.getLeakSumCount()+1);
-                    aggregate.setLeakSumDate(value.getSumDate());
+                    aggregate.setLeakSumDate(value.getAggregationDate());
                     return aggregate;
                 },
                 Materialized.with(Serdes.String(), LeakSumSerde))
@@ -272,44 +201,47 @@ public class Consumer_java {
 
         
         /* DAILY DATA */
-        KStream<String, Measurement> dailyMaxStream = streamsBuilder.stream("etot",
+        KStream<String, Measurement> dailyStream = streamsBuilder.stream("day",
 				Consumed.with(Serdes.String(), MeasurementSerde)
                 .withTimestampExtractor(new MeasurementTimeExtractor())
                 );
 		
         /* send raw data */
-		dailyMaxStream
+		dailyStream
         .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), key.replaceAll("\"", ""))))
-        .to("DAILY_RAW", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
+        .to("raw", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
         
-        /* Calculate Daily Max AggDay[X] */
-        dailyMaxStream
+        /* Calculate Daily Max AggDay[X] and save stream for further calculations (in our case -1 data per day- Max=Raw) */
+        KStream<String, MaxMeasurement> dailyMaxStream = 
+        dailyStream
         .groupByKey()
         .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
         .aggregate(()-> new MaxMeasurement(0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
                     aggregate.setMaxValue(Math.max(aggregate.getMaxValue(), value.getValue()));
                     aggregate.setMaxDate(value.getProduceDate());
-                    // aggregate.setSensorName(key.substring(1, key.length()-1));
                     aggregate.setSensorName(key.replaceAll("\"", ""));
                     return aggregate;
                 },
                 Materialized.with(Serdes.String(), MaxMeasurementSerde))
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
         .toStream()
-        .map((k,v) -> KeyValue.pair(k.key(), v))
-        .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), MaxMeasurementSerde));
+        .map((k,v) -> KeyValue.pair(k.key(), v));
 
-        // AggDayDiff[y] (currDay - prevDate)
+        /* Send Daily aggregated data */
+        dailyMaxStream
+        .to("aggDayDaily", Produced.with(Serdes.String(), MaxMeasurementSerde));
+
+        // AggDayDiff[y] (currDayMax - prevDateMax)
         KStream<String, DiffMeasurement> dailyDiffStream = 
         dailyMaxStream
-        .groupByKey()
+        .groupByKey(Grouped.with(Serdes.String(), MaxMeasurementSerde))
         .windowedBy(TimeWindows.of(Duration.ofDays(2L)).advanceBy(Duration.ofDays(1L)))
         .aggregate(()-> new DiffMeasurement(0.0, 0.0, new Date(), new String()),
                 (key, value, aggregate) -> {
-                    aggregate.setCurrentValue(value.getValue() - aggregate.getPreviousValue());
-                    aggregate.setPreviousValue(value.getValue());
-                    aggregate.setDiffDate(value.getProduceDate());
+                    aggregate.setCurrentValue(value.getMaxValue() - aggregate.getPreviousValue());
+                    aggregate.setPreviousValue(value.getMaxValue());
+                    aggregate.setDiffDate(value.getMaxDate());
                     aggregate.setSensorName(key.replaceAll("\"", ""));
                     return aggregate;
                 },
@@ -320,7 +252,7 @@ public class Consumer_java {
 
         /* send to AggDayDiff Stream */
         dailyDiffStream
-        .to("AGGREGATED_DIFF", Produced.with(Serdes.String(), DiffMeasurementSerde));
+        .to("aggDayDiff", Produced.with(Serdes.String(), DiffMeasurementSerde));
 
         /* Stream contains ENERGY only (not water) total daily diff */
         KStream<String, DiffMeasurement> dailyDiffEnergyTotalStream = 
@@ -336,30 +268,38 @@ public class Consumer_java {
 
         /* Calculate leakage by joining dailyDiffEnergyTotalStream with devicesEnergyStream and subtracting the values */
         ValueJoiner<DiffMeasurement, LeakSum, TotalLeak> leakJoiner = (diffEnergy, summedEnergy) ->
-            new TotalLeak(diffEnergy.getCurrentValue(), summedEnergy.getLeakSum(), diffEnergy.getDiffDate());
+            new TotalLeak(diffEnergy.getCurrentValue(), summedEnergy.getLeakSum(), diffEnergy.getDiffDate(), new String());
 
         KStream<String, TotalLeak> EnergyLeakStream = dailyDiffEnergyTotalStream.join(devicesEnergyStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
 
         EnergyLeakStream
-        .peek((key, value) -> {System.out.println("energy_joined_start"); System.out.println(key); System.out.println(value);});
+        .peek((key, value) -> {System.out.println("energy_joined_start"); System.out.println(key); System.out.println(value);})
+        .map((key, value) -> KeyValue.pair(key, new TotalLeak(value.getLeak(), value.getLeakDate(), "Energy")))
+        .to("leaks", Produced.with(Serdes.String(), TotalLeakSerde));
         
         KStream<String, TotalLeak> WaterLeakStream = dailyDiffWaterTotalStream.join(devicesWaterStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
 
         WaterLeakStream
-        .peek((key, value) -> {System.out.println("water_joined_start"); System.out.println(key); System.out.println(value);});
+        .peek((key, value) -> {System.out.println("water_joined_start"); System.out.println(key); System.out.println(value);})
+        .map((key, value) -> KeyValue.pair(key, new TotalLeak(value.getLeak(), value.getLeakDate(), "Water")))
+        .to("leaks", Produced.with(Serdes.String(), TotalLeakSerde));
         
-        //Consume Move Detection Measurements
-        KStream<String, Measurement> moveDetectionStream = streamsBuilder.stream("moveDetection",
+        /* Consume Move Detection Measurements */
+        KStream<String, Measurement> moveDetectionStream = streamsBuilder.stream("movementSensor",
 				Consumed.with(Serdes.String(), MeasurementSerde)
                 .withTimestampExtractor(new MeasurementTimeExtractor())
                 );
         
-        KStream<String, TotalMovesMeasurement> totalMoveDetectionStream =
+        /* Send raw move detection data */
         moveDetectionStream
-        .transform(()->new totalMovesTransformer(), "totalMoves")
-        // .filter((key, value) -> value.getIsRejected()=="false")
-        // .map((key, value) -> KeyValue.pair(key, new AcceptedMeasurement(value.getValue(), value.getProduceDate())))
-        .peek((key, value) -> {System.out.println("total_moves_end"); System.out.println(key); System.out.println(value);});
+        .map((key, value)->KeyValue.pair(key, new EnrichedMeasurement(value.getValue(), value.getProduceDate(), key.replaceAll("\"", ""))))
+        .to("raw", Produced.with(Serdes.String(), EnrichedMeasurementSerde));
+        
+        /* Count total move detections and send sum up to date */
+        moveDetectionStream
+        .transform(()->new TotalMovesTransformer(), "totalMoves")
+        .to("totalMovements", Produced.with(Serdes.String(), TotalMovesMeasurementSerde))
+        ;
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), properties);
         kafkaStreams.cleanUp();

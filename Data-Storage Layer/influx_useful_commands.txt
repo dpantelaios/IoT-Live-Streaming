@@ -6,4 +6,9 @@ docker exec influxdb influx -execute "CREATE RETENTION POLICY oneday ON influx D
 
 docker exec influxdb influx -execute "SHOW DATABASES"
 
-docker exec influxdb influx -execute "SHOW MEASUREMENTS on influx"  
+docker exec influxdb influx -execute "SHOW MEASUREMENTS on influx"
+
+docker exec -it influxdb bash
+influx
+use influx
+queries...

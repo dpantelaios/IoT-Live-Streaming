@@ -36,16 +36,17 @@ services:
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --list
 
       echo -e 'Creating kafka topics'
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic th1 --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic RAW --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic AGGREGATED --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic AGGREGATED_SUM --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic AGGREGATED_AVERAGE --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic etot --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic DAILY_RAW --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic AGGREGATED_DIFF --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic moveDetection --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic min15 --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic day --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic movementSensor --replication-factor 1 --partitions 1
 
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic raw --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDay15min --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDayDaily --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDayDiff --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic leaks --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic totalMovements --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic lateRejected --replication-factor 1 --partitions 1
 
       echo -e 'Successfully created the following topics:'
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --list

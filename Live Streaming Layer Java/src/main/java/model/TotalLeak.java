@@ -1,11 +1,7 @@
 package model;
-import com.fasterxml.jackson.annotation.JsonFormat;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.util.Date;
-import java.time.LocalDate;
 import java.text.DecimalFormat;
 
 
@@ -13,14 +9,20 @@ import java.text.DecimalFormat;
 @Data
 public class TotalLeak {
     private double leak;
-    // private double joinEnergyDiff;
     private Date leakDate;
+    private String leakType;
 
+    public TotalLeak(double leak, Date leakDate, String leakType) {
+        this.leak=leak;
+        this.leakDate=leakDate;
+        this.leakType=leakType;
+    }
 
-    public TotalLeak(double dayValue, double sumValue, Date tempLeakDate){
+    public TotalLeak(double dayValue, double sumValue, Date tempLeakDate, String leakType){
         final DecimalFormat df1 = new DecimalFormat("0.00");
 
         leak = Double.parseDouble(df1.format(dayValue-sumValue));
         leakDate = tempLeakDate;
+        this.leakType = leakType;
     }
 }

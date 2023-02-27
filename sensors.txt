@@ -20,3 +20,12 @@ Probably internal aggregations:
 
 Probably need 3 topics for device->live streaming (min15, day, movementSensor)
 This allows for better load balancing since eg we can allocate more partitions to 15min sensors which have more traffic than daily
+
+Topics for live streaming -> data storage:
+raw: raw data
+aggDay15min: averages and sum
+?aggDayDaily: max of each day
+aggDayDiff: difference between 2 consecutive dates
+leaks: energy and water leaks
+totalMovements: count of movement movement detections
+lateRejected: late rejected events
