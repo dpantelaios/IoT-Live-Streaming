@@ -84,7 +84,6 @@ while True:
     w1 = {"produceDate":str(current_date), "value":str(w1_val)}
 
     # tst = {"measurement":"weather", "temperature": 33.6, "Timestamp":1465839830100400200}
-
     producer.send('min15', value=th1, key="th1")
     producer.send('min15', value=th2, key="th2")
     
@@ -145,7 +144,7 @@ while True:
         two_days_late_w1_count = 0
         two_days_late_w1_val = generate_water_consumption()
         two_days_late_w1 = {"produceDate":str(two_days_early_date), "value":str(two_days_late_w1_val)}
-        # print("Late accepted: current_date: {}, sent_date: {}, w1_value: {}".format(current_date, two_days_early_date, two_days_late_w1_val))
+        print("Late accepted: current_date: {}, sent_date: {}, w1_value: {}".format(current_date, two_days_early_date, two_days_late_w1_val))
         producer.send('min15', value=two_days_late_w1, key="w1")
 
     # check if it is time to send a late rejected event for w1

@@ -3,3 +3,6 @@ docker exec -it kafka /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server 
 
 List all topics:
 docker exec -it kafka /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+Get topic info:
+docker exec -it kafka /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic raw

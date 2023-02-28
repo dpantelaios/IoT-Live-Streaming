@@ -9,6 +9,7 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.errors.*;
 
 import model.AverageMeasurement;
 import model.JsonSerde;
@@ -317,6 +318,11 @@ public class Consumer_java {
         properties.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         properties.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, "0");
+        // properties.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "3");
+        // properties.put(
+        // StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,
+        // LogAndContinueExceptionHandler.class.getName()
+        // );
 		// properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
         return properties;
     }

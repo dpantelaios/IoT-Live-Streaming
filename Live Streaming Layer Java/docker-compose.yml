@@ -1,16 +1,453 @@
 version: "3.8"
 
 services:
-  live_streaming_layer_java:
+
+  ### first 8 services ###
+
+  live_streaming_layer_java1:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: live_streaming_layer_java
+    container_name: live_streaming_layer_java1
     networks:
       - messaging_broker_layer_default
-      
+
+  live_streaming_layer_java2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live_streaming_layer_java2
+    networks:
+      - messaging_broker_layer_default
+
+  live_streaming_layer_java3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live_streaming_layer_java3
+    networks:
+      - messaging_broker_layer_default
+
+  live_streaming_layer_java4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live_streaming_layer_java4
+    networks:
+      - messaging_broker_layer_default
+
 networks:
   messaging_broker_layer_default:
     external: true
+
+#   live_streaming_layer_java5:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java5
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java6:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java6
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java7:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java7
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java8:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java8
+#     networks:
+#       - messaging_broker_layer_default
+
+#   ### second 8 services ###
+
+#   live_streaming_layer_java9:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java9
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java10:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java10
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java11:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java11
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java12:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java12
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java13:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java13
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java14:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java14
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java15:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java15
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java16:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java16
+#     networks:
+#       - messaging_broker_layer_default
+
+#   ### second 16 services ###
+
+#   live_streaming_layer_java17:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java17
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java18:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java18
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java19:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java19
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java20:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java20
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java21:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java21
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java22:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java22
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java23:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java23
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java24:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java24
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java25:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java25
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java26:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java26
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java27:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java27
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java28:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java28
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java29:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java29
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java30:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java30
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java31:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java31
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java32:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java32
+#     networks:
+#       - messaging_broker_layer_default
+
+#   ### last 22 containers ###
+
+#   live_streaming_layer_java33:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java33
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java34:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java34
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java35:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java35
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java36:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java36
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java37:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java37
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java38:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java38
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java39:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java39
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java40:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java40
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java41:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java41
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java42:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java42
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java43:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java43
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java44:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java44
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java45:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java45
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java46:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java46
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java47:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java47
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java48:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java48
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java49:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java49
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java50:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java50
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java51:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java51
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java52:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java52
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java53:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java53
+#     networks:
+#       - messaging_broker_layer_default
+
+#   live_streaming_layer_java54:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: live_streaming_layer_java54
+#     networks:
+#       - messaging_broker_layer_default
+      
+# networks:
+#   messaging_broker_layer_default:
+#     external: true
 
 

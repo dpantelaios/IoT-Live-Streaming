@@ -2,10 +2,13 @@ version: "3"
 services:
   zookeeper:
     image: 'bitnami/zookeeper:latest'
+    container_name: 'zookeeper'
     ports:
       - '2181:2181'
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOOKEEPER_CLIENT_PORT=2181
+  
   kafka:
     image: 'bitnami/kafka:latest'
     container_name: 'kafka'
@@ -14,13 +17,48 @@ services:
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_GROUP_MAX_SESSION_TIMEOUT_MS=4000000
-      - KAFKA_LISTENERS=LISTENER_EXTERNAL://:9092, LISTENER_INTERNAL://kafka:29090
-      - KAFKA_ADVERTISED_LISTENERS=LISTENER_EXTERNAL://localhost:9092, LISTENER_INTERNAL://kafka:29090
-      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_EXTERNAL
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_EXTERNAL:PLAINTEXT, LISTENER_INTERNAL:PLAINTEXT
+      - KAFKA_LISTENERS=LISTENER_INTERNAL://kafka:29090
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_INTERNAL://kafka:29090
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_INTERNAL
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_INTERNAL:PLAINTEXT
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes 
-      # - KAFKA_CREATE_TOPICS=th1:1:1, RAW:1:1, AGGREGATED:1:1, e_tot:1:1,  DAILY_RAW:1:1, AGGREGATED_DIFF:1:1
+
+    depends_on:
+      - zookeeper
+
+  kafka2:
+    image: 'bitnami/kafka:latest'
+    container_name: 'kafka2'
+    ports:
+      - '9093:9093'
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_CFG_GROUP_MAX_SESSION_TIMEOUT_MS=4000000
+      - KAFKA_LISTENERS=LISTENER_INTERNAL://kafka2:29090
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_INTERNAL://kafka2:29090
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_INTERNAL
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_INTERNAL:PLAINTEXT
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes 
+
+    depends_on:
+      - zookeeper
+
+  kafka3:
+    image: 'bitnami/kafka:latest'
+    container_name: 'kafka3'
+    ports:
+      - '9094:9094'
+    environment:
+      - KAFKA_BROKER_ID=3
+      - KAFKA_CFG_GROUP_MAX_SESSION_TIMEOUT_MS=4000000
+      - KAFKA_LISTENERS=LISTENER_INTERNAL://kafka3:29090
+      - KAFKA_ADVERTISED_LISTENERS=LISTENER_INTERNAL://kafka3:29090
+      - KAFKA_INTER_BROKER_LISTENER_NAME=LISTENER_INTERNAL
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=LISTENER_INTERNAL:PLAINTEXT
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes 
 
     depends_on:
       - zookeeper
@@ -29,24 +67,28 @@ services:
     image: 'bitnami/kafka:latest'
     depends_on:
       - kafka
+      - kafka2
+      - kafka3
     entrypoint: [ '/bin/sh', '-c' ]
     command: |
       "
       # blocks until kafka is reachable
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --list
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka2:29090 --list
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka3:29090 --list
 
       echo -e 'Creating kafka topics'
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic min15 --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic day --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic movementSensor --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic min15 --replication-factor 3 --partitions 7
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic day --replication-factor 3 --partitions 2
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic movementSensor --replication-factor 3 --partitions 1
 
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic raw --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDay15min --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDayDaily --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDayDiff --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic leaks --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic totalMovements --replication-factor 1 --partitions 1
-      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic lateRejected --replication-factor 1 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic raw --replication-factor 3 --partitions 10
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDay15min --replication-factor 3 --partitions 7
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDayDaily --replication-factor 3 --partitions 2
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic aggDayDiff --replication-factor 3 --partitions 2
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic leaks --replication-factor 3 --partitions 2
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic totalMovements --replication-factor 3 --partitions 1
+      /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --create --if-not-exists --topic lateRejected --replication-factor 3 --partitions 10
 
       echo -e 'Successfully created the following topics:'
       /opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29090 --list

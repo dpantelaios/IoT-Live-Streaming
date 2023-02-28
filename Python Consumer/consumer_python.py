@@ -19,7 +19,7 @@ consumer_th1 = KafkaConsumer(
 # consumer_th1.subscribe(['th1'])
 # consumer_th1.subscribe(['etot'])
 # consumer_th1.subscribe(['AGGREGATED'])
-consumer_th1.subscribe(['raw'])
+consumer_th1.subscribe(['aggDay15min'])
 
 
 for event in consumer_th1:
