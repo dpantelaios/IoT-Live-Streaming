@@ -120,23 +120,23 @@ public class Consumer_java {
 		
         /* Calculate Daily Average AggDay[x] and send it to appropriate topic*/
         filteredMin15Stream
-        .filter((key, value) -> avg15.contains(key))
-        .groupByKey(Grouped.with(Serdes.String(), AcceptedMeasurementSerde))
-        .windowedBy(TimeWindows.of(Duration.ofDays(1L)))
-        .aggregate(()-> new AverageMeasurement(0.0, 0, 0.0, new Date(), new String()),
+        .filter((key, value) -> avg15.contains(key)) // filter data in order to keep only 15 minute sensors' data with aggregation function average
+        .groupByKey(Grouped.with(Serdes.String(), AcceptedMeasurementSerde)) // group data by key=SensorName and specify datatypes for serialization and deserialization of input data
+        .windowedBy(TimeWindows.of(Duration.ofDays(1L))) // use window of 1 day duration to capture separately each day's data 
+        .aggregate(()-> new AverageMeasurement(0.0, 0, 0.0, new Date(), new String()),  // initialize count to 0 and totalsum to 0.0
                 (key, value, aggregate) -> {
-                    aggregate.setAddedValues(aggregate.getAddedValues()+value.getValue());
-                    aggregate.setCount(aggregate.getCount()+1);
-                    aggregate.setAvgMeasurement(aggregate.getAddedValues()/aggregate.getCount());
-                    aggregate.setAggregationDate(value.withouttimeDate());
-                    aggregate.setSensorName(key.replaceAll("\"", ""));
+                    aggregate.setAddedValues(aggregate.getAddedValues()+value.getValue());  //sum values of daily data
+                    aggregate.setCount(aggregate.getCount()+1); //count number of sensor measurements through the day
+                    aggregate.setAvgMeasurement(aggregate.getAddedValues()/aggregate.getCount()); // divide summed daily values of sensor with the total number of measurements to compute daily average
+                    aggregate.setAggregationDate(value.withouttimeDate()); //keep Date and set time to 00:00:00
+                    aggregate.setSensorName(key.replaceAll("\"", "")); // save sensor's name
                     return aggregate;
                 },
-                Materialized.with(Serdes.String(), AverageMeasurementSerde))
-        .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
-        .toStream()
-        .map((k,v) -> KeyValue.pair(k.key(), v))
-        .to("aggDay15min", Produced.with(Serdes.String(), AverageMeasurementSerde));
+                Materialized.with(Serdes.String(), AverageMeasurementSerde)) // specify datatypes for serialization and deserialization of produced data
+        .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded())) // output only the final result of the window
+        .toStream() // convert KTable back to KStream
+        .map((k,v) -> KeyValue.pair(k.key(), new AverageMeasurement(Double.parseDouble(df.format(v.getAddedValues())), v.getCount(), Double.parseDouble(df.format(v.getAvgMeasurement())), v.getAggregationDate(), v.getSensorName()))) // restore initial key format which has been changed by the window implementation
+        .to("aggDay15min", Produced.with(Serdes.String(), AverageMeasurementSerde)); //specify serialization data type and send to topic aggDay15min
        
     
         /* Calculate Daily Sum AggDay[X] and save the stream to use for further calculations*/
@@ -177,7 +177,7 @@ public class Consumer_java {
                 },
                 Materialized.with(Serdes.String(), LeakSumSerde))
         .toStream()
-        .filter((key, value)->value.getLeakSumCount()>=3) //change number to sum15Energy.size
+        .filter((key, value)->value.getLeakSumCount()>=sum15Energy.size()) 
         .map((k,v) -> KeyValue.pair(k.key(), new LeakSum(Double.parseDouble(df.format(v.getLeakSum())), v.getLeakSumCount(), v.getLeakSumDate())))
         ;
 
@@ -196,7 +196,7 @@ public class Consumer_java {
                 },
                 Materialized.with(Serdes.String(), LeakSumSerde))
         .toStream()
-        .filter((key, value)->value.getLeakSumCount()>=1) //change number to sum15Water.size
+        .filter((key, value)->value.getLeakSumCount()>=sum15Water.size()) 
         .map((k,v) -> KeyValue.pair(k.key(), new LeakSum(Double.parseDouble(df.format(v.getLeakSum())), v.getLeakSumCount(), v.getLeakSumDate())))
         ;
 
@@ -259,7 +259,8 @@ public class Consumer_java {
         KStream<String, DiffMeasurement> dailyDiffEnergyTotalStream = 
         dailyDiffStream
         .filter((key, value) -> daily15Energy.contains(key))
-        .map((key, value) -> KeyValue.pair(jsonDateFormat.format(value.getDiffDate()), value));
+        .map((key, value) -> KeyValue.pair(jsonDateFormat.format(value.getDiffDate()), value))
+        ;
 
         /* Stream contains WATER only (not energy) total daily diff */
         KStream<String, DiffMeasurement> dailyDiffWaterTotalStream = 
@@ -274,15 +275,13 @@ public class Consumer_java {
         KStream<String, TotalLeak> EnergyLeakStream = dailyDiffEnergyTotalStream.join(devicesEnergyStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
 
         EnergyLeakStream
-        // .peek((key, value) -> {System.out.println("energy_joined_start"); System.out.println(key); System.out.println(value);})
-        .map((key, value) -> KeyValue.pair(key, new TotalLeak(value.getLeak(), value.getLeakDate(), "Energy")))
+        .map((key, value) -> KeyValue.pair("Energy", new TotalLeak(value.getLeak(), value.getLeakDate(), "Energy")))
         .to("leaks", Produced.with(Serdes.String(), TotalLeakSerde));
         
         KStream<String, TotalLeak> WaterLeakStream = dailyDiffWaterTotalStream.join(devicesWaterStream, leakJoiner, JoinWindows.of(Duration.ofDays(1L)), StreamJoined.with(Serdes.String(), DiffMeasurementSerde, LeakSumSerde));
 
         WaterLeakStream
-        // .peek((key, value) -> {System.out.println("water_joined_start"); System.out.println(key); System.out.println(value);})
-        .map((key, value) -> KeyValue.pair(key, new TotalLeak(value.getLeak(), value.getLeakDate(), "Water")))
+        .map((key, value) -> KeyValue.pair("Water", new TotalLeak(value.getLeak(), value.getLeakDate(), "Water")))
         .to("leaks", Produced.with(Serdes.String(), TotalLeakSerde));
         
         /* Consume Move Detection Measurements */
