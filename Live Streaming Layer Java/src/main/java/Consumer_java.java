@@ -135,7 +135,7 @@ public class Consumer_java {
                 Materialized.with(Serdes.String(), AverageMeasurementSerde)) // specify datatypes for serialization and deserialization of produced data
         .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded())) // output only the final result of the window
         .toStream() // convert KTable back to KStream
-        .map((k,v) -> KeyValue.pair(k.key(), v)) // restore initial key format which has been changed by the window implementation
+        .map((k,v) -> KeyValue.pair(k.key(), new AverageMeasurement(Double.parseDouble(df.format(v.getAddedValues())), v.getCount(), Double.parseDouble(df.format(v.getAvgMeasurement())), v.getAggregationDate(), v.getSensorName()))) // restore initial key format which has been changed by the window implementation
         .to("aggDay15min", Produced.with(Serdes.String(), AverageMeasurementSerde)); //specify serialization data type and send to topic aggDay15min
        
     
