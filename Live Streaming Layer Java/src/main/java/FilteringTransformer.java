@@ -25,7 +25,7 @@ public class FilteringTransformer implements Transformer<String, Measurement, Ke
     public KeyValue<String, FlaggedMeasurement> transform(String key, Measurement value) {
         long valueTime = value.getProduceDate().getTime();
         FlaggedMeasurement newVal;
-        if(lastSeen-valueTime>=864000000) {
+        if(lastSeen-valueTime>172800000) {
             newVal = new FlaggedMeasurement(value.getValue(), "true", value.getProduceDate());
         }
         else {

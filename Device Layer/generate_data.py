@@ -55,6 +55,7 @@ ten_days_late_w1_count = 0
 daily_hvac1=0
 daily_hvac2=0
 daily_miac1=0
+daily_miac2=0
 dailyEtotal=0
 daily_w1 = 0
 dailyWtot=0
@@ -95,7 +96,7 @@ while True:
     producer.send('min15', value=w1, key="w1")
 
     if current_date.hour == 0 and current_date.minute == 0:
-        print("hvac1 daily sum: {}, hvac2 daily sum: {}, miac1 daily sum: {}\nenergy total: {}, device sum: {}, difference: {}".format(daily_hvac1, daily_hvac2, daily_miac1, dailyEtotal, daily_hvac1+daily_hvac2+daily_miac1, dailyEtotal-(daily_hvac1+daily_hvac2+daily_miac1)))
+        print("hvac1 daily sum: {}, hvac2 daily sum: {}, miac1 daily sum: {}\nenergy total: {}, device sum: {}, difference: {}".format(daily_hvac1, daily_hvac2, daily_miac1, dailyEtotal, daily_hvac1+daily_hvac2+daily_miac1+daily_miac2, dailyEtotal-(daily_hvac1+daily_hvac2+daily_miac1+daily_miac2)))
         print("w1 dail sum for {}: {}, Wtot: {}, difference: {}".format(current_date - timedelta.Timedelta(days=1), daily_w1, dailyWtot, dailyWtot-daily_w1))
         
         # daily data Etot, Wtot
@@ -116,12 +117,14 @@ while True:
         daily_hvac1 = 0
         daily_hvac2 = 0
         daily_miac1 = 0
+        daily_miac2 = 0
         daily_w1 = 0
     
     ### debug variables ###
     daily_hvac1 = daily_hvac1 + hvac1_val
     daily_hvac2 = daily_hvac2 + hvac2_val
     daily_miac1 = daily_miac1 + miac1_val
+    daily_miac2 = daily_miac2 + miac2_val
     daily_w1 += w1_val
     ### debug variables ###
 
